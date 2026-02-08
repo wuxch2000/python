@@ -70,7 +70,7 @@ class Object:
 
 class Ball(Object):
     radius = 10
-    max_dist_per_move = 5
+    max_dist_per_move = 20
     _angle = None
     _stop = False
     
@@ -98,9 +98,23 @@ class Ball(Object):
         new_pos = (pos[0]+delta_x, pos[1]+delta_y, pos[2]+delta_x, pos[3]+delta_y)
         # print("move_ball: ", pos, "-->", new_pos)
         return new_pos
-    def moveto(new_pos):
+    def _moveto(self, new_pos):
         pos = super().coords()
-        super().moveto(new_pos)
+        dist = abs(int((new_pos[0] - pos[0])/math.cos(self._angle)))
+        moved_dist = 0
+        while moved_dist < dist:
+            if dist - moved_dist >= Ball.max_dist_per_move:
+                d = Ball.max_dist_per_move
+                moved_dist += d
+                print("move dist by max:", d)
+                p = self.next_pos(d)
+                super().moveto(p)
+            else:
+                d = dist - moved_dist
+                moved_dist += d
+                print("move dist:", d)
+                p = self.next_pos(d)
+                super().moveto(p)
         return
     def move(self):
         global wall,bar,data
@@ -116,19 +130,19 @@ class Ball(Object):
                 pos = super().coords()
                 next_pos = self.next_pos(distance)
                 print("--> ball hit(dist=", distance, "):", pos, "-->", next_pos)
-                super().moveto(next_pos)
+                self._moveto(next_pos)
                 if remain_dist is not None:
                     if new_angle is not None:
                         self._angle = new_angle
                         # print("ball: set new angle to", self._angle)
                     next_pos = self.next_pos(remain_dist)
                     print("--> ball hit(remain dist=", remain_dist, "):", "-->", next_pos)
-                    super().moveto(next_pos)
+                    self._moveto(next_pos)
                 if isinstance(obj, Bar):
                     data.bar_hit()
                 return
         next_pos = self.next_pos(distance)
-        super().moveto(next_pos)
+        self._moveto(next_pos)
         return
 
 class Wall(Object):
