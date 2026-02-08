@@ -70,8 +70,10 @@ class Object:
 
 class Ball(Object):
     radius = 10
+    max_dist_per_move = 5
     _angle = None
     _stop = False
+    
     def __init__(self, master):
         self._angle = random.uniform(math.pi/4, math.pi*3/4)
         # self._angle = math.pi*3/8
@@ -96,6 +98,10 @@ class Ball(Object):
         new_pos = (pos[0]+delta_x, pos[1]+delta_y, pos[2]+delta_x, pos[3]+delta_y)
         # print("move_ball: ", pos, "-->", new_pos)
         return new_pos
+    def moveto(new_pos):
+        pos = super().coords()
+        super().moveto(new_pos)
+        return
     def move(self):
         global wall,bar,data
         if self._stop:
