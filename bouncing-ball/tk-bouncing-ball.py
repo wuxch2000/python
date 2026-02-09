@@ -5,20 +5,28 @@ import random
 from tkinter import *
 from tkinter import ttk
 
+game_text_id_list = list()
 def game_over():
+    global game_text_id_list
     global canvas
     x = canvas.max_x()
     y = canvas.max_y()
-    canvas.create_text(x/2, y/2, text="Game Over", anchor="center", fill="blue", font=("Helvetica", 64, "italic"),)
+    game_text_id_list.append(canvas.create_text(x/2, y/2, text="Game Over", anchor="center", fill="blue", font=("Helvetica", 64, "italic")))
+    game_text_id_list.append(canvas.create_text(x/2, (y/2)+50, text="Press <space> to start", anchor="center", fill="green", font=("Helvetica", 24, "roman")))
     return
 # _default_timeout = 10
 _default_timeout = 100
+
 def _timeout(root):
-    global ball
+    global ball, global_start
+    root.after(_default_timeout, _timeout, root)
+    # print("timeout: global_start=", global_start, "ball.stop()", ball.stop())
+    if not global_start:
+        return
     if ball.stop():
         game_over()
+        global_start = False
         return
-    root.after(_default_timeout, _timeout, root)
     ball.move()
     return
 
@@ -26,11 +34,42 @@ def _quit():
     root.destroy()
     return
 
+def _game_start_text():
+    global canvas, game_text_id_list
+    x = canvas.max_x()
+    y = canvas.max_y()
+    game_text_id_list.append(canvas.create_text(x/2, y/2, text="Press <space> to start", anchor="center", fill="green", font=("Helvetica", 24, "roman")))
+    return
+
+def _clear_all_text():
+    global canvas, game_text_id_list
+    for i in game_text_id_list:
+        canvas.delete(i)
+    return
+
+global_start = False
+needs_reset = False
+def _start():
+    global canvas, bar, ball, data
+    global global_start, needs_reset
+    print("------> start")
+    if needs_reset:
+        data.reset()
+        bar.reset()
+        ball.reset()
+    else:
+        needs_reset = True
+    global_start = True
+    _clear_all_text()
+    return
+
 def _on_key(event):
     global bar
     # print("Key:", event.keysym)
     if event.keysym == "q":
         _quit()
+    elif event.keysym == "space":
+        _start()
     elif event.keysym == "Left":
         bar.move_left()
     elif event.keysym == "Right":
@@ -81,6 +120,14 @@ class Ball(Object):
         y = (int)(master.max_y()*0.9)-Ball.radius
         pos = ( x-Ball.radius, y-Ball.radius, x+Ball.radius, y+Ball.radius)
         super().__init__(master, master.create_oval(*pos, fill='red', outline='red'))
+        return
+    def reset(self):
+        self._angle = random.uniform(math.pi/4, math.pi*3/4)
+        self._stop = False
+        x = (int)(self._master.max_x()/2)
+        y = (int)(self._master.max_y()*0.9)-Ball.radius
+        pos = ( x-Ball.radius, y-Ball.radius, x+Ball.radius, y+Ball.radius)
+        super().moveto(pos)
         return
     def stop(self):
         return self._stop
@@ -269,6 +316,13 @@ class Bar(Object):
         pos = ( self.min_x, self.min_y, self.max_x, self.max_y)
         super().__init__(master, master.create_rectangle(*pos, fill='yellow', outline='red', width=Bar._border_width))
         return
+    def reset(self):
+        x = (int)(self._master.max_x()/2)
+        y = (int)(self._master.max_y()*0.9)
+        self.min_x, self.max_x, self.min_y, self.max_y = x-(Bar._width/2), x+(Bar._width/2), y-(Bar._height/2), y+(Bar._height/2)
+        super().moveto((self.min_x, self.min_y, self.max_x, self.max_y))
+        return
+
     def move_left(self):
         global wall, data
         wall_min_x = wall.min_x
@@ -332,6 +386,13 @@ class Data:
     _bar_hit  = 0
     _bar_hit_var: None
     _bar_speed = 20
+    def reset(self):
+        self._ball_speed = 20
+        self._ball_hit = 0
+        print("Data reset: ball_speed=", self._ball_speed, "ball_hit=", self._ball_hit)
+        self._ball_speed_var.set(self._text_ball_speed())
+        self._bar_hit_var.set(self._text_bar_hit())
+        return
     def _text_ball_speed(self):
         return f'Speed: {self._ball_speed}'
     def _text_bar_hit(self):
@@ -340,11 +401,11 @@ class Data:
         self._master = master
         self._ball_speed_var = StringVar()
         self._ball_speed_var.set(self._text_ball_speed())
-        ttk.Label(master, textvariable=self._ball_speed_var, width=20).grid(column=1, row=1, sticky=W)
+        ttk.Label(master, textvariable=self._ball_speed_var, width=20, foreground="yellow", font=("Helvetica", 20, "roman")).grid(column=1, row=1, sticky=W)
 
         self._bar_hit_var = StringVar()
         self._bar_hit_var.set(self._text_bar_hit())
-        ttk.Label(master,  textvariable=self._bar_hit_var, width=20).grid(column=2, row=1, sticky=W)
+        ttk.Label(master,  textvariable=self._bar_hit_var, width=20, foreground="yellow", font=("Helvetica", 20, "roman")).grid(column=2, row=1, sticky=W)
         return
     def ball_speed(self, ball_speed=None):
         if ball_speed is not None:
@@ -373,6 +434,7 @@ def init():
     wall = Wall(canvas)
     bar = Bar(canvas)
     ball = Ball(canvas)
+    _game_start_text()
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
     mainframe.columnconfigure(2, weight=1)
