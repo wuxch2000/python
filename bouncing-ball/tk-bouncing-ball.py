@@ -12,7 +12,7 @@ def game_over():
     x = canvas.max_x()
     y = canvas.max_y()
     game_text_id_list.append(canvas.create_text(x/2, y/2, text="Game Over", anchor="center", fill="blue", font=("Helvetica", 64, "italic")))
-    game_text_id_list.append(canvas.create_text(x/2, (y/2)+50, text="Press <space> to start", anchor="center", fill="green", font=("Helvetica", 24, "roman")))
+    game_text_id_list.append(canvas.create_text(x/2, (y/2)+50, text="Press <space> to restart", anchor="center", fill="green", font=("Helvetica", 24, "roman")))
     return
 # _default_timeout = 10
 _default_timeout = 100
