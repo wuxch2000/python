@@ -160,13 +160,23 @@ class Border(Turtle):
             return False
         return True
 
-def left():
-    global bar
+bar_move_left, bar_move_right = False, False
+def left_press():
+    global bar_move_left
+    bar_move_left = True
     bar.left()
 
-def right():
-    global bar
-    bar.right()
+def left_release():
+    global bar_move_left
+    bar_move_left = False
+
+def right_press():
+    global bar_move_right
+    bar_move_right = True
+
+def right_release():
+    global bar_move_right
+    bar_move_right = False
 
 def quit():
     print("quit")
@@ -174,6 +184,10 @@ def quit():
 
 def ontimer():
     global bar, ball
+    if bar_move_left:
+        bar.left()
+    if bar_move_right:
+        bar.right()
     if ball.move():
         scr = bar.getscreen()
         scr.ontimer(ontimer, 10) # 0.01s
@@ -190,6 +204,10 @@ def init_screen():
     screen.onkey(right, "Right")
     screen.onkey(quit, "q")
     screen.onkey(quit, "Escape")
+    screen.onkeypress(left_press, "Left")
+    screen.onkeyrelease(left_release, "Left")
+    screen.onkeypress(right_press, "Right")
+    screen.onkeyrelease(right_release, "Right")
     screen.ontimer(ontimer, 10) #0.01s
     return
 

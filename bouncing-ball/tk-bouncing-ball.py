@@ -18,7 +18,7 @@ def game_over():
 _default_timeout = 100
 
 def _timeout(root):
-    global ball, global_start
+    global ball, global_start, bar
     root.after(_default_timeout, _timeout, root)
     # print("timeout: global_start=", global_start, "ball.stop()", ball.stop())
     if not global_start:
@@ -27,6 +27,10 @@ def _timeout(root):
         game_over()
         global_start = False
         return
+    if bar_move_left:
+        bar.move_left()
+    if bar_move_right:
+        bar.move_right()
     ball.move()
     return
 
@@ -63,17 +67,26 @@ def _start():
     _clear_all_text()
     return
 
-def _on_key(event):
-    global bar
+bar_move_left, bar_move_right = False, False
+def _on_key_press(event):
+    global bar, bar_move_left, bar_move_right
     # print("Key:", event.keysym)
     if event.keysym == "q":
         _quit()
     elif event.keysym == "space":
         _start()
     elif event.keysym == "Left":
-        bar.move_left()
+        bar_move_left = True
     elif event.keysym == "Right":
-        bar.move_right()
+        bar_move_right = True
+    return
+
+def _on_key_release(event):
+    global bar_move_left, bar_move_right
+    if event.keysym == "Left":
+        bar_move_left = False
+    elif event.keysym == "Right":
+        bar_move_right = False
     return
 
 class BouncingCanvas(Canvas):
@@ -440,7 +453,8 @@ def init():
     mainframe.columnconfigure(2, weight=1)
     for child in mainframe.winfo_children(): 
         child.grid_configure(padx=5, pady=5)
-    root.bind("<KeyPress>", _on_key)
+    root.bind("<KeyPress>", _on_key_press)
+    root.bind("<KeyRelease>", _on_key_release)
     root.focus_set()
     root.after(_default_timeout, _timeout, root)
 
