@@ -1,5 +1,7 @@
 #! /usr/local/bin/python3
 
+import random
+import math
 import arcade
 
 class Pos:
@@ -13,9 +15,10 @@ class Data:
     bar_width     = 80
     bar_height    = 10
     bar_pos       = Pos(window_width/2, 50)
-    bar_move_speed = 20
+    bar_speed = 20
     ball_radius   = 10
     ball_pos      = Pos(window_width/2, bar_pos.y+(bar_height/2)+ball_radius)
+    ball_speed    = 10
     border_gap    = 30
     wall_width    = 10
     def __init__(self):
@@ -54,6 +57,12 @@ class Ball(arcade.SpriteCircle):
     def __init__(self):
         super().__init__(data.ball_radius, arcade.color.RED)
         self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
+        self.angle = random.uniform(math.pi/4, math.pi*3/4)
+        return
+    def update(self, delta_time: float = 1/60):
+        self.angle += self.change_angle
+        self.center_x += data.ball_speed * math.sin(self.angle)
+        self.center_y += data.ball_speed * math.cos(self.angle)
         return
 
 class Bar(arcade.SpriteSolidColor):
@@ -80,9 +89,9 @@ class Bar(arcade.SpriteSolidColor):
     def _update_speed(self):
         self.change_x = 0
         if self.left_pressed and not self.right_pressed:
-            self.change_x = -data.bar_move_speed
+            self.change_x = -data.bar_speed
         elif self.right_pressed and not self.left_pressed:
-            self.change_x = data.bar_move_speed
+            self.change_x = data.bar_speed
         return
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
