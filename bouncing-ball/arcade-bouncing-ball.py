@@ -3,6 +3,12 @@
 import random
 import math
 import arcade
+import numpy
+
+def reflect_vector(incident_vector, normal_vector):
+    n = normal_vector / numpy.linalg.norm(normal_vector)
+    v_dot_n = numpy.dot(incident_vector, n)
+    return incident_vector - 2 * v_dot_n * n
 
 class Pos:
     def __init__(self, x, y):
@@ -12,13 +18,13 @@ class Data:
     window_width  = 1024
     window_height = window_width
     window_title  = "Bouncing Ball"
-    bar_width     = 80
+    bar_width     = 100
     bar_height    = 10
     bar_pos       = Pos(window_width/2, 50)
-    bar_speed = 20
+    bar_speed     = 10
     ball_radius   = 10
     ball_pos      = Pos(window_width/2, bar_pos.y+(bar_height/2)+ball_radius)
-    ball_speed    = 10
+    ball_speed    = 5
     border_gap    = 30
     wall_width    = 10
     def __init__(self):
@@ -26,9 +32,10 @@ class Data:
 
 class Wall(arcade.SpriteSolidColor):
     min_x, max_x, min_y, max_y = False, False, False, False
-    def __init__(self, width, height, pos):
-        super().__init__(width, height, arcade.color.BLACK_OLIVE)
+    def __init__(self, width, height, pos, normal_vec: numpy.array):
+        super().__init__(width, height, color=arcade.color.BLACK_OLIVE)
         self.center_x, self.center_y = pos.x, pos.y
+        self.normal_vec = normal_vec
         return
 
 class Border(arcade.SpriteList):
@@ -37,18 +44,18 @@ class Border(arcade.SpriteList):
         # left wall
         width, height = data.wall_width, data.window_height-2*data.border_gap
         x, y = data.border_gap + data.wall_width/2, data.window_height/2
-        wall = Wall(width, height, Pos(x,y))
+        wall = Wall(width, height, Pos(x,y), numpy.array([1,0]))
         wall.min_x = True
         super().append(wall)
         # ceiling
         width, height = data.window_width-2*data.border_gap, data.wall_width
         x, y = data.window_width/2, data.window_height- data.border_gap -data.wall_width/2
-        wall = Wall(width, height, Pos(x,y))
+        wall = Wall(width, height, Pos(x,y), numpy.array([0, -1]))
         super().append(wall)
         # right wall
         width, height = data.wall_width, data.window_height-2*data.border_gap
         x, y = data.window_width-data.border_gap-data.wall_width/2, data.window_height/2
-        wall = Wall(width, height, Pos(x,y))
+        wall = Wall(width, height, Pos(x,y), numpy.array([-1, 0]))
         wall.max_x = True
         super().append(wall)
         return
@@ -57,20 +64,22 @@ class Ball(arcade.SpriteCircle):
     def __init__(self):
         super().__init__(data.ball_radius, arcade.color.RED)
         self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
-        self.angle = random.uniform(math.pi/4, math.pi*3/4)
+        start_angle = random.uniform(math.pi/4, math.pi*3/4)
+        self.change_x = data.ball_speed * math.sin(start_angle)
+        self.change_y = data.ball_speed * math.cos(start_angle)
         return
     def update(self, delta_time: float = 1/60):
-        self.angle += self.change_angle
-        self.center_x += data.ball_speed * math.sin(self.angle)
-        self.center_y += data.ball_speed * math.cos(self.angle)
+        self.center_x += self.change_x
+        self.center_y += self.change_y
         return
 
 class Bar(arcade.SpriteSolidColor):
     def __init__(self):
-        super().__init__(data.bar_width, data.bar_height, arcade.color.YELLOW)
+        super().__init__(data.bar_width, data.bar_height, color=arcade.color.YELLOW)
         self.center_x, self.center_y = data.bar_pos.x, data.bar_pos.y
         self.left_pressed  = False
         self.right_pressed = False
+        self.normal_vec = numpy.array([0,1])
         return
     def on_key_press(self, key, modifiers):
         if key == arcade.key.LEFT:
@@ -110,6 +119,10 @@ class BouncingView(arcade.Window):
         self.moving_list.append(self.bar)
         self.ball= Ball()
         self.moving_list.append(self.ball)
+        self.ball_collision_list = arcade.SpriteList()
+        for s in self.border:
+            self.ball_collision_list.append(s)
+        self.ball_collision_list.append(self.bar)
         return
     def on_draw(self):
         self.clear()
@@ -123,6 +136,13 @@ class BouncingView(arcade.Window):
                 self.bar.change_x = 0
             if c.max_x and self.bar.change_x > 0:
                 self.bar.change_x = 0
+
+        collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
+        for c in collision:
+            incident_vec = numpy.array([self.ball.change_x, self.ball.change_y])
+            refect_vec = reflect_vector(incident_vec, c.normal_vec)
+            self.ball.change_x, self.ball.change_y = refect_vec[0], refect_vec[1]
+
         self.bar.update(delta_time)
         self.ball.update(delta_time)
         return
