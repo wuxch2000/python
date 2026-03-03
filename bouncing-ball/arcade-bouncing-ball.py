@@ -21,12 +21,13 @@ class Data:
     bar_width     = 100
     bar_height    = 10
     bar_pos       = Pos(window_width/2, 50)
-    bar_speed     = 10
+    bar_speed     = 15
     ball_radius   = 10
     ball_pos      = Pos(window_width/2, bar_pos.y+(bar_height/2)+ball_radius)
     ball_speed    = 5
     border_gap    = 30
     wall_width    = 10
+    hit           = 0
     def __init__(self):
         return
 
@@ -37,6 +38,8 @@ class Wall(arcade.SpriteSolidColor):
         self.center_x, self.center_y = pos.x, pos.y
         self.normal_vec = normal_vec
         return
+    def hit(self):
+        return 0
 
 class Border(arcade.SpriteList):
     def __init__(self):
@@ -64,9 +67,9 @@ class Ball(arcade.SpriteCircle):
     def __init__(self):
         super().__init__(data.ball_radius, arcade.color.RED)
         self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
-        start_angle = random.uniform(math.pi/4, math.pi*3/4)
-        self.change_x = data.ball_speed * math.sin(start_angle)
-        self.change_y = data.ball_speed * math.cos(start_angle)
+        angle = random.uniform(math.pi/4, math.pi*3/4)
+        self.change_x = data.ball_speed * math.cos(angle)
+        self.change_y = data.ball_speed * math.sin(angle)
         return
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
@@ -102,6 +105,8 @@ class Bar(arcade.SpriteSolidColor):
         elif self.right_pressed and not self.left_pressed:
             self.change_x = data.bar_speed
         return
+    def hit(self):
+        return 1
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
         self.center_y += self.change_y
@@ -119,7 +124,9 @@ class BouncingView(arcade.Window):
         self.moving_list.append(self.bar)
         self.ball= Ball()
         self.moving_list.append(self.ball)
-        self.ball_collision_list = arcade.SpriteList()
+        self.ball_collision_list = arcade.SpriteList() 
+        self.score_text = arcade.Text(f"Hit: {data.hit}", 10, 10, arcade.color.WHITE, 14)
+
         for s in self.border:
             self.ball_collision_list.append(s)
         self.ball_collision_list.append(self.bar)
@@ -128,8 +135,10 @@ class BouncingView(arcade.Window):
         self.clear()
         self.border.draw()
         self.moving_list.draw()
+        self.score_text.draw()
         return
     def on_update(self, delta_time):
+        global data
         collision = arcade.check_for_collision_with_list(self.bar, self.border)
         for c in collision:
             if c.min_x and self.bar.change_x < 0:
@@ -142,9 +151,12 @@ class BouncingView(arcade.Window):
             incident_vec = numpy.array([self.ball.change_x, self.ball.change_y])
             refect_vec = reflect_vector(incident_vec, c.normal_vec)
             self.ball.change_x, self.ball.change_y = refect_vec[0], refect_vec[1]
+            data.hit += c.hit()
+            print("hit: add ", c.hit(), "=", data.hit)
 
         self.bar.update(delta_time)
         self.ball.update(delta_time)
+        self.score_text.value = f"Hit: {data.hit}"
         return
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE or key == arcade.key.Q:
