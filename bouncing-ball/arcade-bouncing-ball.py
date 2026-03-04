@@ -70,7 +70,7 @@ class Border(arcade.SpriteList):
         # bottom wall
         width, height = data.window_width-2*data.border_gap, data.wall_width
         x, y = data.window_width/2, data.border_gap +data.wall_width/2
-        wall = Wall(width, height, Pos(x,y), numpy.array([0, 0]), Border.bottom_wall_color, stop_game = True) # ball will stop for normal-vector 0,0
+        wall = Wall(width, height, Pos(x,y), numpy.array([0, 1]), Border.bottom_wall_color, stop_game = True)
         super().append(wall)
         return
 
