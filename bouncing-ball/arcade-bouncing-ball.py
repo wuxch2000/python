@@ -26,6 +26,7 @@ class Data:
     ball_radius   = 10
     ball_pos      = Pos(window_width/2, bar_pos.y+(bar_height/2)+ball_radius)
     ball_speed    = 5
+    ball_speed_inc= 2
     border_gap    = 30
     wall_width    = 10
     hit           = 0
@@ -137,6 +138,7 @@ class BouncingView(arcade.Window):
         self.moving_list.append(self.ball)
         self.ball_collision_list = arcade.SpriteList() 
         self.score_text = arcade.Text(f"Hit: {data.hit}", 10, 10, arcade.color.WHITE, 14)
+        self.speed_text = arcade.Text(f"Speed: {data.ball_speed}", 20, 10, arcade.color.WHITE, 14)
 
         for s in self.border:
             self.ball_collision_list.append(s)
@@ -147,6 +149,7 @@ class BouncingView(arcade.Window):
         self.border.draw()
         self.moving_list.draw()
         self.score_text.draw()
+        self.speed_text.draw()
         return
     def on_update(self, delta_time):
         global data
@@ -166,11 +169,14 @@ class BouncingView(arcade.Window):
                 old_hit = data.hit
                 data.hit += c.hit()
                 print("hit: ", old_hit, "->", data.hit)
+                old_speed = data.ball_speed + data.ball_speed_inc
+                print("speed: ", old_speed, "->", data.ball_speed)
             if c.stop_game and data.game_on:
                 print("Stop game")
                 data.game_on = False
 
         self.score_text.value = f"Hit: {data.hit}"
+        self.speed_text.value = f"Speed: {data.ball_speed}"
         self.bar.update(delta_time)
         if data.game_on:
             self.ball.update(delta_time)
