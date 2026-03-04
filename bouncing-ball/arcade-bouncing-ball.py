@@ -14,6 +14,7 @@ class Pos:
     def __init__(self, x, y):
         self.x, self.y = x, y
 
+BACK_GROUND_COLR=arcade.csscolor.BLACK
 class Data:
     game_on       = False
     window_width  = 1024
@@ -47,7 +48,7 @@ class Wall(arcade.SpriteSolidColor):
 
 class Border(arcade.SpriteList):
     regular_wall_color = arcade.color.BLACK_OLIVE
-    bottom_wall_color = arcade.color.BLACK
+    bottom_wall_color = BACK_GROUND_COLR
     def __init__(self):
         super().__init__()
         # left wall
@@ -143,7 +144,7 @@ class Bar(arcade.SpriteSolidColor):
 class BouncingView(arcade.Window):
     def __init__(self):
         super().__init__(data.window_width, data.window_height, data.window_title)
-        self.background_color = arcade.csscolor.BLACK
+        self.background_color = BACK_GROUND_COLR
         return
     def setup(self):
         self.moving_list = arcade.SpriteList()
