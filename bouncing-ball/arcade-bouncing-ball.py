@@ -2,8 +2,8 @@
 
 import random
 import math
-import arcade
 import numpy
+import arcade
 
 def reflect_vector(incident_vector, normal_vector):
     n = normal_vector / numpy.linalg.norm(normal_vector)
