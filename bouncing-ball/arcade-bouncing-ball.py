@@ -75,16 +75,23 @@ class Border(arcade.SpriteList):
         return
 
 class Ball(arcade.SpriteCircle):
+    def _update_x_y(self, angle):
+        self.change_x = data.ball_speed * math.cos(angle)
+        self.change_y = data.ball_speed * math.sin(angle)
+        return
     def __init__(self):
         super().__init__(data.ball_radius, arcade.color.RED)
         self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
         angle = random.uniform(math.pi/4, math.pi*3/4)
-        self.change_x = data.ball_speed * math.cos(angle)
-        self.change_y = data.ball_speed * math.sin(angle)
+        self._update_x_y(angle)
         return
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
         self.center_y += self.change_y
+        return
+    def update_speed(self):
+        angle = math.atan2(self.change_y, self.change_x)
+        self._update_x_y(angle)
         return
 
 class Bar(arcade.SpriteSolidColor):
@@ -138,18 +145,23 @@ class BouncingView(arcade.Window):
         self.moving_list.append(self.ball)
         self.ball_collision_list = arcade.SpriteList() 
         self.score_text = arcade.Text(f"Hit: {data.hit}", 10, 10, arcade.color.WHITE, 14)
-        self.speed_text = arcade.Text(f"Speed: {data.ball_speed}", 20, 10, arcade.color.WHITE, 14)
+        self.speed_text = arcade.Text(f"Speed: {data.ball_speed}", 80, 10, arcade.color.WHITE, 14)
+        self.game_over_text = arcade.Text(f"Game Over", (data.window_width/2)-140, data.window_height/2, arcade.color.WHITE, font_size=46, bold=True, italic=True )
 
         for s in self.border:
             self.ball_collision_list.append(s)
         self.ball_collision_list.append(self.bar)
         return
     def on_draw(self):
+        global data
         self.clear()
         self.border.draw()
         self.moving_list.draw()
         self.score_text.draw()
         self.speed_text.draw()
+        if not data.game_on:
+            self.game_over_text.draw()
+        # self.game_over_text.draw()
         return
     def on_update(self, delta_time):
         global data
@@ -160,20 +172,24 @@ class BouncingView(arcade.Window):
             if c.max_x and self.bar.change_x > 0:
                 self.bar.change_x = 0
 
-        collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
-        for c in collision:
-            incident_vec = numpy.array([self.ball.change_x, self.ball.change_y])
-            refect_vec = reflect_vector(incident_vec, c.normal_vec)
-            self.ball.change_x, self.ball.change_y = refect_vec[0], refect_vec[1]
-            if c.hit():
-                old_hit = data.hit
-                data.hit += c.hit()
-                print("hit: ", old_hit, "->", data.hit)
-                old_speed = data.ball_speed + data.ball_speed_inc
-                print("speed: ", old_speed, "->", data.ball_speed)
-            if c.stop_game and data.game_on:
-                print("Stop game")
-                data.game_on = False
+        if data.game_on:
+            collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
+            for c in collision:
+                incident_vec = numpy.array([self.ball.change_x, self.ball.change_y])
+                refect_vec = reflect_vector(incident_vec, c.normal_vec)
+                self.ball.change_x, self.ball.change_y = refect_vec[0], refect_vec[1]
+                if c.stop_game:
+                    print("Stop game")
+                    data.game_on = False
+                    break
+                if c.hit():
+                    old_hit = data.hit
+                    data.hit += c.hit()
+                    print("hit: ", old_hit, "->", data.hit)
+                    old_speed = data.ball_speed
+                    data.ball_speed += data.ball_speed_inc
+                    print("speed: ", old_speed, "->", data.ball_speed)
+                    self.ball.update_speed()
 
         self.score_text.value = f"Hit: {data.hit}"
         self.speed_text.value = f"Speed: {data.ball_speed}"
