@@ -82,7 +82,10 @@ class Ball(arcade.SpriteCircle):
     def __init__(self):
         super().__init__(data.ball_radius, arcade.color.RED)
         self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
-        angle = random.uniform(math.pi/4, math.pi*3/4)
+        random_list = { 0:(math.pi/4, math.pi*3/8), 1:(math.pi*5/8, math.pi*6/8) }
+        rand_i = random.randint(0,1)
+        rand_min, rand_max = random_list[rand_i]
+        angle = random.uniform(rand_min, rand_max)
         self._update_x_y(angle)
         return
     def update(self, delta_time: float = 1/60):
@@ -132,7 +135,7 @@ class Bar(arcade.SpriteSolidColor):
         self.center_x += self.change_x
         if self.center_x < self.min_x:
             self.center_x = self.min_x
-        if self.center_x > self.max_x:
+        elif self.center_x > self.max_x:
             self.center_x = self.max_x
         self.center_y += self.change_y
         return
@@ -149,8 +152,8 @@ class BouncingView(arcade.Window):
         self.moving_list.append(self.bar)
         self.ball= Ball()
         self.moving_list.append(self.ball)
-        self.score_text = arcade.Text(f"Hit: {data.hit}", 10, 10, arcade.color.WHITE, 14)
-        self.speed_text = arcade.Text(f"Speed: {data.ball_speed}", 80, 10, arcade.color.WHITE, 14)
+        self.score_text = arcade.Text(f"Hit: {data.hit}", 10,  data.window_height - 20, arcade.color.WHITE, 14)
+        self.speed_text = arcade.Text(f"Speed: {data.ball_speed}", 80, data.window_height - 20, arcade.color.WHITE, 14)
         self.game_over_text = arcade.Text(f"Game Over", (data.window_width/2)-140, data.window_height/2, arcade.color.WHITE, font_size=46, bold=True, italic=True )
 
         self.ball_collision_list = arcade.SpriteList() 
