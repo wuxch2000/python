@@ -15,6 +15,7 @@ class Pos:
         self.x, self.y = x, y
 
 class Data:
+    game_on       = False
     window_width  = 1024
     window_height = window_width
     window_title  = "Bouncing Ball"
@@ -33,33 +34,42 @@ class Data:
 
 class Wall(arcade.SpriteSolidColor):
     min_x, max_x, min_y, max_y = False, False, False, False
-    def __init__(self, width, height, pos, normal_vec: numpy.array):
-        super().__init__(width, height, color=arcade.color.BLACK_OLIVE)
+    stop_game = False
+    def __init__(self, width, height, pos, normal_vec: numpy.array, wall_color, stop_game = False):
+        super().__init__(width, height, color=wall_color)
         self.center_x, self.center_y = pos.x, pos.y
         self.normal_vec = normal_vec
+        self.stop_game = stop_game
         return
     def hit(self):
         return 0
 
 class Border(arcade.SpriteList):
+    regular_wall_color = arcade.color.BLACK_OLIVE
+    bottom_wall_color = arcade.color.BLACK
     def __init__(self):
         super().__init__()
         # left wall
         width, height = data.wall_width, data.window_height-2*data.border_gap
         x, y = data.border_gap + data.wall_width/2, data.window_height/2
-        wall = Wall(width, height, Pos(x,y), numpy.array([1,0]))
+        wall = Wall(width, height, Pos(x,y), numpy.array([1,0]), Border.regular_wall_color)
         wall.min_x = True
         super().append(wall)
         # ceiling
         width, height = data.window_width-2*data.border_gap, data.wall_width
         x, y = data.window_width/2, data.window_height- data.border_gap -data.wall_width/2
-        wall = Wall(width, height, Pos(x,y), numpy.array([0, -1]))
+        wall = Wall(width, height, Pos(x,y), numpy.array([0, -1]), Border.regular_wall_color)
         super().append(wall)
         # right wall
         width, height = data.wall_width, data.window_height-2*data.border_gap
         x, y = data.window_width-data.border_gap-data.wall_width/2, data.window_height/2
-        wall = Wall(width, height, Pos(x,y), numpy.array([-1, 0]))
+        wall = Wall(width, height, Pos(x,y), numpy.array([-1, 0]), Border.regular_wall_color)
         wall.max_x = True
+        super().append(wall)
+        # bottom wall
+        width, height = data.window_width-2*data.border_gap, data.wall_width
+        x, y = data.window_width/2, data.border_gap +data.wall_width/2
+        wall = Wall(width, height, Pos(x,y), numpy.array([0, 0]), Border.bottom_wall_color, stop_game = True) # ball will stop for normal-vector 0,0
         super().append(wall)
         return
 
@@ -77,6 +87,7 @@ class Ball(arcade.SpriteCircle):
         return
 
 class Bar(arcade.SpriteSolidColor):
+    stop_game = False
     def __init__(self):
         super().__init__(data.bar_width, data.bar_height, color=arcade.color.YELLOW)
         self.center_x, self.center_y = data.bar_pos.x, data.bar_pos.y
@@ -151,12 +162,18 @@ class BouncingView(arcade.Window):
             incident_vec = numpy.array([self.ball.change_x, self.ball.change_y])
             refect_vec = reflect_vector(incident_vec, c.normal_vec)
             self.ball.change_x, self.ball.change_y = refect_vec[0], refect_vec[1]
-            data.hit += c.hit()
-            print("hit: add ", c.hit(), "=", data.hit)
+            if c.hit():
+                old_hit = data.hit
+                data.hit += c.hit()
+                print("hit: ", old_hit, "->", data.hit)
+            if c.stop_game and data.game_on:
+                print("Stop game")
+                data.game_on = False
 
-        self.bar.update(delta_time)
-        self.ball.update(delta_time)
         self.score_text.value = f"Hit: {data.hit}"
+        self.bar.update(delta_time)
+        if data.game_on:
+            self.ball.update(delta_time)
         return
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE or key == arcade.key.Q:
@@ -170,6 +187,7 @@ class BouncingView(arcade.Window):
 def main():
     global data
     data = Data()
+    data.game_on = True
     window = BouncingView()
     window.setup()
     arcade.run()
