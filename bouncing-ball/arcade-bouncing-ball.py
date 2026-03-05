@@ -33,17 +33,20 @@ class Data:
     hit           = 0
     def __init__(self):
         return
-
 class Wall(arcade.SpriteSolidColor):
-    min_x, max_x, min_y, max_y = False, False, False, False
     stop_game = False
     def __init__(self, width, height, pos, normal_vec: numpy.array, wall_color, stop_game = False):
         super().__init__(width, height, color=wall_color)
         self.center_x, self.center_y = pos.x, pos.y
         self.normal_vec = normal_vec
         self.stop_game = stop_game
+        if self.stop_game:
+            self.hit_sound = arcade.load_sound( ":resources:/sounds/gameover3.wav")
+        else:
+            self.hit_sound = arcade.load_sound( ":resources:/sounds/hurt2.wav")
         return
     def hit(self):
+        self.hit_sound.play()
         return 0
 
 class Border(arcade.SpriteList):
@@ -99,6 +102,7 @@ class Ball(arcade.SpriteCircle):
         return
 
 class Bar(arcade.SpriteSolidColor):
+    hit_sound = arcade.load_sound( ":resources:/sounds/hurt5.wav")
     def __init__(self):
         super().__init__(data.bar_width, data.bar_height, color=arcade.color.YELLOW)
         self.center_x, self.center_y = data.bar_pos.x, data.bar_pos.y
@@ -131,6 +135,7 @@ class Bar(arcade.SpriteSolidColor):
             self.change_x = data.bar_speed
         return
     def hit(self):
+        self.hit_sound.play()
         return 1
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
@@ -156,7 +161,6 @@ class BouncingView(arcade.Window):
         self.score_text = arcade.Text(f"Hit: {data.hit}", 10,  data.window_height - 20, arcade.color.WHITE, 14)
         self.speed_text = arcade.Text(f"Speed: {data.ball_speed}", 80, data.window_height - 20, arcade.color.WHITE, 14)
         self.game_over_text = arcade.Text(f"Game Over", (data.window_width/2)-140, data.window_height/2, arcade.color.WHITE, font_size=46, bold=True, italic=True )
-
         self.ball_collision_list = arcade.SpriteList() 
         for s in self.border:
             self.ball_collision_list.append(s)
@@ -180,13 +184,14 @@ class BouncingView(arcade.Window):
                 incident_vec = numpy.array([self.ball.change_x, self.ball.change_y])
                 refect_vec = reflect_vector(incident_vec, c.normal_vec)
                 self.ball.change_x, self.ball.change_y = refect_vec[0], refect_vec[1]
+                hit = c.hit()
                 if c.stop_game:
                     print("Stop game")
                     data.game_on = False
                     break
-                if c.hit():
+                if hit:
                     old_hit = data.hit
-                    data.hit += c.hit()
+                    data.hit += hit
                     print("hit: ", old_hit, "->", data.hit)
                     old_speed = data.ball_speed
                     data.ball_speed += data.ball_speed_inc
