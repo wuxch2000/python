@@ -146,10 +146,15 @@ class Bar(arcade.SpriteSolidColor):
         self.center_y += self.change_y
         return
 
-class BouncingView(arcade.Window):
+class BouncingWindow(arcade.Window):
     def __init__(self):
         super().__init__(data.window_width, data.window_height, data.window_title)
         self.background_color = BACK_GROUND_COLR
+        return
+
+class BouncingView(arcade.View):
+    def __init__(self):
+        super().__init__()
         return
     def setup(self):
         self.moving_list = arcade.SpriteList()
@@ -206,7 +211,7 @@ class BouncingView(arcade.Window):
         return
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE or key == arcade.key.Q:
-            self.close()
+            self.window.close()
         self.bar.on_key_press(key, modifiers)
         return
     def on_key_release(self, key, modifiers):
@@ -217,8 +222,10 @@ def main():
     global data
     data = Data()
     data.game_on = True
-    window = BouncingView()
-    window.setup()
+    window = BouncingWindow()
+    bouncing_view = BouncingView()
+    window.show_view(bouncing_view)
+    bouncing_view.setup()
     arcade.run()
 
 if __name__ == "__main__":
