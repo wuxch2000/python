@@ -127,8 +127,9 @@ class Ball(arcade.SpriteCircle):
         super().__init__(data.ball_radius, arcade.color.RED)
         self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
         return
-    def setup(self):
+    def reset(self):
         self._set_angle()
+        self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
         return
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
@@ -151,6 +152,8 @@ class Bar(arcade.SpriteSolidColor):
         self.min_x = data.border_gap+data.wall_width+(data.bar_width/2)
         self.max_x = data.window_width-self.min_x
         return
+    def reset(self):
+        pass
     def on_key_press(self, key, modifiers):
         if key == arcade.key.LEFT:
             self.left_pressed = True
@@ -201,8 +204,10 @@ class BouncingWindow(arcade.Window):
             self.show_view(view)
     def game_start(self):
         data.start_over()
-        view = self.current_view()
+        view = data.current_view()
         if view:
+            view.ball.reset()
+            view.bar.reset()
             self.show_view(view)
 
 class GeneralView(arcade.View):
@@ -213,7 +218,7 @@ class GeneralView(arcade.View):
         self.border = Border()
         self.bar= Bar()
         self.ball= Ball()
-        self.ball.setup()
+        self.ball.reset()
         self.moving_list = arcade.SpriteList()
         self.moving_list.append(self.ball)
         self.moving_list.append(self.bar)
@@ -261,6 +266,10 @@ class GameOverView(GeneralView):
         # super().on_draw() #just keep the last screen
         self.game_over_text.draw()
         self.press_space_text.draw()
+        return
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.SPACE:
+           self.window.game_start()
         return
 class BouncingView(GeneralView):
     def __init__(self):
