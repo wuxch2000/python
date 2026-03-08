@@ -31,8 +31,25 @@ class Data:
     border_gap    = 30
     wall_width    = 10
     hit           = 0
+    _view_list     = []
     def __init__(self):
         return
+    def append_view(self, view):
+        self._view_list.append(view)
+        return
+    def current_view(self):
+        if self._view_list:
+            return self._view_list[0]
+        return None
+    def last_view(self):
+        if self._view_list:
+            return self._view_list[-1]
+        return None
+    def next_view(self):
+        if self._view_list:
+            self._view_list.pop(0)
+        return self.current_view()
+
 class Wall(arcade.SpriteSolidColor):
     stop_game = False
     def __init__(self, width, height, pos, normal_vec: numpy.array, wall_color, stop_game = False):
@@ -151,36 +168,82 @@ class BouncingWindow(arcade.Window):
         super().__init__(data.window_width, data.window_height, data.window_title)
         self.background_color = BACK_GROUND_COLR
         return
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.ESCAPE or key == arcade.key.Q:
+            self.close()
+        if key == arcade.key.SPACE:
+            view = data.next_view()
+            if view:
+                self.show_view(view)
+        return
+    def on_key_release(self, key, modifiers):
+        return
+    def game_over(self):
+        view = data.last_view()
+        if view:
+            self.show_view(view)
 
-class BouncingView(arcade.View):
+class GeneralView(arcade.View):
     def __init__(self):
         super().__init__()
         return
     def setup(self):
-        self.moving_list = arcade.SpriteList()
         self.border = Border()
         self.bar= Bar()
-        self.moving_list.append(self.bar)
         self.ball= Ball()
+        self.moving_list = arcade.SpriteList()
         self.moving_list.append(self.ball)
+        self.moving_list.append(self.bar)
         self.score_text = arcade.Text(f"Hit: {data.hit}", 10,  data.window_height - 20, arcade.color.WHITE, 14)
         self.speed_text = arcade.Text(f"Speed: {data.ball_speed}", 80, data.window_height - 20, arcade.color.WHITE, 14)
-        self.game_over_text = arcade.Text(f"Game Over", (data.window_width/2)-140, data.window_height/2, arcade.color.WHITE, font_size=46, bold=True, italic=True )
+        return
+    def on_draw(self):
+        self.clear()
+        self.border.draw()
+        self.moving_list.draw()
+        self.score_text.draw()
+        self.speed_text.draw()
+        return
+
+class GameStartView(GeneralView):
+    def __init__(self):
+        super().__init__()
+        return
+    def setup(self):
+        super().setup()
+        self.game_start_text = arcade.Text(f"Bouncing Ball", (data.window_width/2), data.window_height/2 + 40, anchor_x="center", anchor_y="center", color=arcade.color.YELLOW, font_size=46, bold=True, italic=True )
+        self.press_space_text = arcade.Text(f"press <SPACE> to start", (data.window_width/2), data.window_height/2 - 40, anchor_x="center", anchor_y="center", color=arcade.color.YELLOW_ORANGE, font_size=20, bold=False, italic=False )
+        return
+    def on_draw(self):
+        super().on_draw()
+        self.game_start_text.draw()
+        self.press_space_text.draw()
+        return
+class GameOverView(GeneralView):
+    def __init__(self):
+        super().__init__()
+        return
+    def setup(self):
+        super().setup()
+        self.game_over_text = arcade.Text(f"Game Over", (data.window_width/2), data.window_height/2 + 40, anchor_x="center", anchor_y="center", color=arcade.color.YELLOW, font_size=46, bold=True, italic=True )
+        return
+    def on_draw(self):
+        # super().on_draw() #just keep the last screen
+        self.game_over_text.draw()
+        return
+class BouncingView(GeneralView):
+    def __init__(self):
+        super().__init__()
+        return
+    def setup(self):
+        super().setup()
         self.ball_collision_list = arcade.SpriteList() 
         for s in self.border:
             self.ball_collision_list.append(s)
         self.ball_collision_list.append(self.bar)
         return
     def on_draw(self):
-        global data
-        self.clear()
-        self.border.draw()
-        self.moving_list.draw()
-        self.score_text.draw()
-        self.speed_text.draw()
-        if not data.game_on:
-            self.game_over_text.draw()
-        return
+        super().on_draw()
     def on_update(self, delta_time):
         global data
         if data.game_on:
@@ -208,10 +271,10 @@ class BouncingView(arcade.View):
         self.bar.update(delta_time)
         if data.game_on:
             self.ball.update(delta_time)
+        else:
+            self.window.game_over()
         return
     def on_key_press(self, key, modifiers):
-        if key == arcade.key.ESCAPE or key == arcade.key.Q:
-            self.window.close()
         self.bar.on_key_press(key, modifiers)
         return
     def on_key_release(self, key, modifiers):
@@ -223,9 +286,16 @@ def main():
     data = Data()
     data.game_on = True
     window = BouncingWindow()
+    game_start_view = GameStartView()
+    game_start_view.setup()
+    data.append_view(game_start_view)
     bouncing_view = BouncingView()
-    window.show_view(bouncing_view)
     bouncing_view.setup()
+    data.append_view(bouncing_view)
+    game_over_view = GameOverView()
+    game_over_view.setup()
+    data.append_view(game_over_view)
+    window.show_view(data.current_view())
     arcade.run()
 
 if __name__ == "__main__":
