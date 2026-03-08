@@ -14,7 +14,7 @@ class Pos:
     def __init__(self, x, y):
         self.x, self.y = x, y
 
-BACK_GROUND_COLR=arcade.csscolor.BLACK
+BACK_GROUND_COLOR=arcade.csscolor.BLACK
 class Data:
     game_on       = False
     window_width  = 1024
@@ -26,29 +26,45 @@ class Data:
     bar_speed     = 15
     ball_radius   = 10
     ball_pos      = Pos(window_width/2, bar_pos.y+(bar_height/2)+ball_radius)
-    ball_speed    = 5
+    ball_init_speed = 5
+    ball_max_speed = 20
     ball_speed_inc= 2
     border_gap    = 30
     wall_width    = 10
     hit           = 0
     _view_list     = []
+    _view_list_index = 0
     def __init__(self):
+        self._ball_speed = Data.ball_init_speed
         return
     def append_view(self, view):
         self._view_list.append(view)
         return
     def current_view(self):
-        if self._view_list:
-            return self._view_list[0]
+        if self._view_list and self._view_list_index < len(self._view_list):
+            return self._view_list[self._view_list_index]
         return None
     def last_view(self):
         if self._view_list:
             return self._view_list[-1]
         return None
     def next_view(self):
-        if self._view_list:
-            self._view_list.pop(0)
+        self._view_list_index += 1
         return self.current_view()
+    def inc_speed(self):
+        old_speed = self._ball_speed
+        self._ball_speed += Data.ball_speed_inc
+        if self._ball_speed > Data.ball_max_speed:
+            self._ball_speed = Data.ball_max_speed
+        print("speed: ", old_speed, "->", data._ball_speed)
+    def get_ball_speed(self):
+        return self._ball_speed
+    def start_over(self):
+        self._ball_speed = Data.ball_init_speed
+        self.hit = 0
+        self._view_list_index = 1
+        self.game_on = True
+        return
 
 class Wall(arcade.SpriteSolidColor):
     stop_game = False
@@ -68,7 +84,7 @@ class Wall(arcade.SpriteSolidColor):
 
 class Border(arcade.SpriteList):
     regular_wall_color = arcade.color.BLACK_OLIVE
-    bottom_wall_color = BACK_GROUND_COLR
+    bottom_wall_color = BACK_GROUND_COLOR
     def __init__(self):
         super().__init__()
         # left wall
@@ -97,17 +113,22 @@ class Border(arcade.SpriteList):
 
 class Ball(arcade.SpriteCircle):
     def _update_x_y(self, angle):
-        self.change_x = data.ball_speed * math.cos(angle)
-        self.change_y = data.ball_speed * math.sin(angle)
+        self.change_x = data.get_ball_speed() * math.cos(angle)
+        self.change_y = data.get_ball_speed() * math.sin(angle)
         return
-    def __init__(self):
-        super().__init__(data.ball_radius, arcade.color.RED)
-        self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
+    def _set_angle(self):
         random_list = { 0:(math.pi/4, math.pi*3/8), 1:(math.pi*5/8, math.pi*6/8) }
         rand_i = random.randint(0,1)
         rand_min, rand_max = random_list[rand_i]
         angle = random.uniform(rand_min, rand_max)
         self._update_x_y(angle)
+        return
+    def __init__(self):
+        super().__init__(data.ball_radius, arcade.color.RED)
+        self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
+        return
+    def setup(self):
+        self._set_angle()
         return
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
@@ -166,7 +187,7 @@ class Bar(arcade.SpriteSolidColor):
 class BouncingWindow(arcade.Window):
     def __init__(self):
         super().__init__(data.window_width, data.window_height, data.window_title)
-        self.background_color = BACK_GROUND_COLR
+        self.background_color = BACK_GROUND_COLOR
         return
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE or key == arcade.key.Q:
@@ -182,6 +203,11 @@ class BouncingWindow(arcade.Window):
         view = data.last_view()
         if view:
             self.show_view(view)
+    def game_start(self):
+        data.start_over()
+        view = self.current_view()
+        if view:
+            self.show_view(view)
 
 class GeneralView(arcade.View):
     def __init__(self):
@@ -191,11 +217,12 @@ class GeneralView(arcade.View):
         self.border = Border()
         self.bar= Bar()
         self.ball= Ball()
+        self.ball.setup()
         self.moving_list = arcade.SpriteList()
         self.moving_list.append(self.ball)
         self.moving_list.append(self.bar)
         self.score_text = arcade.Text(f"Hit: {data.hit}", 10,  data.window_height - 20, arcade.color.WHITE, 14)
-        self.speed_text = arcade.Text(f"Speed: {data.ball_speed}", 80, data.window_height - 20, arcade.color.WHITE, 14)
+        self.speed_text = arcade.Text(f"Speed: {data.get_ball_speed()}", 80, data.window_height - 20, arcade.color.WHITE, 14)
         return
     def on_draw(self):
         self.clear()
@@ -219,6 +246,10 @@ class GameStartView(GeneralView):
         self.game_start_text.draw()
         self.press_space_text.draw()
         return
+    def on_key_press(self, key, modifiers):
+        return
+    def on_key_release(self, key, modifiers):
+        return
 class GameOverView(GeneralView):
     def __init__(self):
         super().__init__()
@@ -226,10 +257,12 @@ class GameOverView(GeneralView):
     def setup(self):
         super().setup()
         self.game_over_text = arcade.Text(f"Game Over", (data.window_width/2), data.window_height/2 + 40, anchor_x="center", anchor_y="center", color=arcade.color.YELLOW, font_size=46, bold=True, italic=True )
+        self.press_space_text = arcade.Text(f"press <SPACE> to restart", (data.window_width/2), data.window_height/2 - 40, anchor_x="center", anchor_y="center", color=arcade.color.YELLOW_ORANGE, font_size=20, bold=False, italic=False )
         return
     def on_draw(self):
         # super().on_draw() #just keep the last screen
         self.game_over_text.draw()
+        self.press_space_text.draw()
         return
 class BouncingView(GeneralView):
     def __init__(self):
@@ -261,13 +294,12 @@ class BouncingView(GeneralView):
                     old_hit = data.hit
                     data.hit += hit
                     print("hit: ", old_hit, "->", data.hit)
-                    old_speed = data.ball_speed
-                    data.ball_speed += data.ball_speed_inc
-                    print("speed: ", old_speed, "->", data.ball_speed)
+                    old_speed = data.get_ball_speed()
+                    data.inc_speed()
                     self.ball.update_speed()
 
         self.score_text.value = f"Hit: {data.hit}"
-        self.speed_text.value = f"Speed: {data.ball_speed}"
+        self.speed_text.value = f"Speed: {data.get_ball_speed()}"
         self.bar.update(delta_time)
         if data.game_on:
             self.ball.update(delta_time)
