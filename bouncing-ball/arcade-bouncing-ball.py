@@ -192,10 +192,6 @@ class BouncingWindow(arcade.Window):
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE or key == arcade.key.Q:
             self.close()
-        if key == arcade.key.SPACE:
-            view = data.next_view()
-            if view:
-                self.show_view(view)
         return
     def on_key_release(self, key, modifiers):
         return
@@ -247,6 +243,8 @@ class GameStartView(GeneralView):
         self.press_space_text.draw()
         return
     def on_key_press(self, key, modifiers):
+        if key == arcade.key.SPACE:
+           self.window.game_start()
         return
     def on_key_release(self, key, modifiers):
         return
