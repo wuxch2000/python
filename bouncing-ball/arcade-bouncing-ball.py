@@ -71,7 +71,7 @@ class Wall(arcade.SpriteSolidColor):
     def __init__(self, width, height, pos, normal_vec: numpy.array, wall_color, stop_game = False):
         super().__init__(width, height, color=wall_color)
         self.center_x, self.center_y = pos.x, pos.y
-        self.normal_vec = normal_vec
+        self._normal_vec = normal_vec
         self.stop_game = stop_game
         if self.stop_game:
             self.hit_sound = arcade.load_sound( ":resources:/sounds/gameover3.wav")
@@ -81,6 +81,8 @@ class Wall(arcade.SpriteSolidColor):
     def hit(self):
         self.hit_sound.play()
         return 0
+    def normal_vector(self, Ball) -> numpy.array:
+        return self._normal_vec
 
 class Border(arcade.SpriteList):
     regular_wall_color = arcade.color.BLACK_OLIVE
@@ -110,6 +112,19 @@ class Border(arcade.SpriteList):
         wall = Wall(width, height, Pos(x,y), numpy.array([0, 1]), Border.bottom_wall_color, stop_game = True)
         super().append(wall)
         return
+
+class Brick(arcade.SpriteSolidColor):
+    def __init__(self, width, height, pos, normal_vec: numpy.array, brick_color):
+        super().__init__(width, height, color=brick_color)
+        self.center_x, self.center_y = pos.x, pos.y
+        self._normal_vec = normal_vec
+        self.hit_sound = arcade.load_sound( ":resources:/sounds/hurt3.wav")
+        return
+    def hit(self):
+        self.hit_sound.play()
+        return 0
+    def normal_vector(self, Ball) -> numpy.array:
+        return self._normal_vec
 
 class Ball(arcade.SpriteCircle):
     def _update_x_y(self, angle):
@@ -148,7 +163,7 @@ class Bar(arcade.SpriteSolidColor):
         self.left_pressed  = False
         self.right_pressed = False
         self.stop_game = False
-        self.normal_vec = numpy.array([0,1])
+        self._normal_vec = numpy.array([0,1])
         self.min_x = data.border_gap+data.wall_width+(data.bar_width/2)
         self.max_x = data.window_width-self.min_x
         return
@@ -178,6 +193,8 @@ class Bar(arcade.SpriteSolidColor):
     def hit(self):
         self.hit_sound.play()
         return 1
+    def normal_vector(self, Ball) -> numpy.array:
+        return self._normal_vec
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
         if self.center_x < self.min_x:
@@ -267,7 +284,7 @@ class BouncingView(GeneralView):
             collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
             for c in collision:
                 incident_vec = numpy.array([self.ball.change_x, self.ball.change_y])
-                refect_vec = reflect_vector(incident_vec, c.normal_vec)
+                refect_vec = reflect_vector(incident_vec, c.normal_vector(self.ball))
                 self.ball.change_x, self.ball.change_y = refect_vec[0], refect_vec[1]
                 hit = c.hit()
                 if c.stop_game:
