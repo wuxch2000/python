@@ -10,30 +10,45 @@ def reflect_vector(incident_vector, normal_vector):
     v_dot_n = numpy.dot(incident_vector, n)
     return incident_vector - 2 * v_dot_n * n
 
+def sprite_reflect(moving_sprite, block_sprite):
+    incident_vec = numpy.array([moving_sprite.change_x, moving_sprite.change_y])
+    normal_vec = block_sprite.normal_vector(moving_sprite)
+    if normal_vec is None:
+        print("invalid normal vec:")
+        return
+    refect_vec = reflect_vector(incident_vec, block_sprite.normal_vector(moving_sprite))
+    moving_sprite.change_x, moving_sprite.change_y = refect_vec[0], refect_vec[1]
+    return
+
+
 class Pos:
     def __init__(self, x, y):
         self.x, self.y = x, y
 
 BACK_GROUND_COLOR=arcade.csscolor.BLACK
 class Data:
-    game_on       = False
-    window_width  = 1024
-    window_height = window_width
-    window_title  = "Bouncing Ball"
-    bar_width     = 100
-    bar_height    = 10
-    bar_pos       = Pos(window_width/2, 50)
-    bar_speed     = 15
-    ball_radius   = 10
-    ball_pos      = Pos(window_width/2, bar_pos.y+(bar_height/2)+ball_radius)
-    ball_init_speed = 5
-    ball_max_speed = 20
-    ball_speed_inc= 2
-    border_gap    = 30
-    wall_width    = 10
-    hit           = 0
-    _view_list     = []
+    game_on          = False
+    window_width     = 1024
+    window_height    = window_width
+    window_title     = "Bouncing Ball"
+    _view_list       = []
     _view_list_index = 0
+    bar_width        = 100
+    bar_height       = 10
+    bar_pos          = Pos(window_width/2, 50)
+    bar_speed        = 15
+    bar_hit_score    = 3
+    ball_radius      = 10
+    ball_pos         = Pos(window_width/2, bar_pos.y+(bar_height/2)+ball_radius)
+    ball_init_speed  = 5
+    ball_max_speed   = 20
+    ball_speed_inc   = 1
+    border_gap       = 30
+    wall_width       = 10
+    score            = 0
+    brick_width      = 40
+    brick_height     = bar_height
+    brick_hit_score  = 1
     def __init__(self):
         self._ball_speed = Data.ball_init_speed
         return
@@ -61,7 +76,7 @@ class Data:
         return self._ball_speed
     def start_over(self):
         self._ball_speed = Data.ball_init_speed
-        self.hit = 0
+        self.score = 0
         self._view_list_index = 1
         self.game_on = True
         return
@@ -114,17 +129,48 @@ class Border(arcade.SpriteList):
         return
 
 class Brick(arcade.SpriteSolidColor):
-    def __init__(self, width, height, pos, normal_vec: numpy.array, brick_color):
-        super().__init__(width, height, color=brick_color)
+    def __init__(self, pos):
+        super().__init__(Data.brick_width, Data.brick_height, color=arcade.color.CADMIUM_ORANGE)
+        # print("brick: x=", pos.x, "y=", pos.y)
         self.center_x, self.center_y = pos.x, pos.y
-        self._normal_vec = normal_vec
         self.hit_sound = arcade.load_sound( ":resources:/sounds/hurt3.wav")
+        self._normal_vector_dict = {
+            "left-side":   numpy.array([-1, 0]),
+            "right-side":  numpy.array([1, 0]),
+            "top-side":    numpy.array([0, 1]),
+            "bottom-side": numpy.array([0, -1]),
+        }
         return
     def hit(self):
         self.hit_sound.play()
-        return 0
-    def normal_vector(self, Ball) -> numpy.array:
-        return self._normal_vec
+        return 1
+    def normal_vector(self, ball:Ball) -> numpy.array:
+        if ball.center_x < self.left:
+            return self._normal_vector_dict["left-side"]
+        elif ball.center_x > self.right:
+            return self._normal_vector_dict["right-side"]
+        elif ball.center_y > self.top:
+            return self._normal_vector_dict["top-side"]
+        elif ball.center_y < self.bottom:
+            return self._normal_vector_dict["bottom-side"]
+        else:
+            print("ball.x", ball.center_x, ".y=", ball.center_y, "left=", self.left, "right=", self.right, "top=", self.top, "bottom=", self.bottom)
+            if ball.change_y > 0:
+                return self._normal_vector_dict["bottom-side"]
+            if ball.change_y < 0:
+                return self._normal_vector_dict["top-side"]
+        return None
+
+class Barrier(arcade.SpriteList):
+    def __init__(self):
+        super().__init__()
+        for i in range(0, 12):
+            x = 2*data.border_gap+i*2*Data.brick_width
+            for j in range(0, 5):
+                y = Data.window_height*4/5 + j*(2*Data.brick_height)
+                brick = Brick(Pos(x,y))
+                super().append(brick)
+        return
 
 class Ball(arcade.SpriteCircle):
     def _update_x_y(self, angle):
@@ -192,7 +238,7 @@ class Bar(arcade.SpriteSolidColor):
         return
     def hit(self):
         self.hit_sound.play()
-        return 1
+        return Data.bar_hit_score
     def normal_vector(self, Ball) -> numpy.array:
         return self._normal_vec
     def update(self, delta_time: float = 1/60):
@@ -216,8 +262,8 @@ class GeneralView(arcade.View):
         self.moving_list = arcade.SpriteList()
         self.moving_list.append(self.ball)
         self.moving_list.append(self.bar)
-        self.score_text = arcade.Text(f"Hit: {data.hit}", 10,  data.window_height - 20, arcade.color.WHITE, 14)
-        self.speed_text = arcade.Text(f"Speed: {data.get_ball_speed()}", 80, data.window_height - 20, arcade.color.WHITE, 14)
+        self.score_text = arcade.Text(f"Score: {data.score}", 10,  data.window_height - 20, arcade.color.WHITE, 14)
+        self.speed_text = arcade.Text(f"Speed: {data.get_ball_speed()}", 120, data.window_height - 20, arcade.color.WHITE, 14)
         return
     def on_draw(self):
         self.clear()
@@ -271,6 +317,7 @@ class BouncingView(GeneralView):
         return
     def setup(self):
         super().setup()
+        self._barrier = Barrier()
         self.ball_collision_list = arcade.SpriteList() 
         for s in self.border:
             self.ball_collision_list.append(s)
@@ -278,28 +325,33 @@ class BouncingView(GeneralView):
         return
     def on_draw(self):
         super().on_draw()
+        self._barrier.draw()
     def on_update(self, delta_time):
         global data
         if data.game_on:
+            collision = arcade.check_for_collision_with_list(self.ball, self._barrier)
+            for c in collision:
+                sprite_reflect(self.ball, c)
+                hit = c.hit()
+                data.score += hit
+                self._barrier.remove(c)
             collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
             for c in collision:
-                incident_vec = numpy.array([self.ball.change_x, self.ball.change_y])
-                refect_vec = reflect_vector(incident_vec, c.normal_vector(self.ball))
-                self.ball.change_x, self.ball.change_y = refect_vec[0], refect_vec[1]
+                sprite_reflect(self.ball, c)
                 hit = c.hit()
                 if c.stop_game:
                     print("Stop game")
                     data.game_on = False
                     break
                 if hit:
-                    old_hit = data.hit
-                    data.hit += hit
-                    print("hit: ", old_hit, "->", data.hit)
+                    # old_score = data.score
+                    data.score += hit
+                    # print("score: ", old_hit, "->", data.hit)
                     old_speed = data.get_ball_speed()
                     data.inc_speed()
                     self.ball.update_speed()
 
-        self.score_text.value = f"Hit: {data.hit}"
+        self.score_text.value = f"Score: {data.score}"
         self.speed_text.value = f"Speed: {data.get_ball_speed()}"
         self.bar.update(delta_time)
         if data.game_on:
