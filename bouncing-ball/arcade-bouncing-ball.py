@@ -16,10 +16,22 @@ def sprite_reflect(moving_sprite, block_sprite):
     if normal_vec is None:
         print("invalid normal vec:")
         return
-    refect_vec = reflect_vector(incident_vec, block_sprite.normal_vector(moving_sprite))
+    refect_vec = reflect_vector(incident_vec, normal_vec)
     moving_sprite.change_x, moving_sprite.change_y = refect_vec[0], refect_vec[1]
     return
 
+def rotate_vector_2d(vector, angle_degrees):
+    """
+    Rotates a 2D vector around the origin counter-clockwise.
+    """
+    print("rotate vecotr by ", angle_degrees, "degree, counter-colockwise")
+    angle_radians = math.radians(angle_degrees)
+    # Rotation matrix
+    R = numpy.array([[numpy.cos(angle_radians), -numpy.sin(angle_radians)],
+                  [numpy.sin(angle_radians), numpy.cos(angle_radians)]])
+    # Matrix multiplication
+    rotated_vector = R @ vector
+    return rotated_vector
 
 class Pos:
     def __init__(self, x, y):
@@ -203,7 +215,6 @@ class Ball(arcade.SpriteCircle):
 
 class Bar(arcade.SpriteSolidColor):
     hit_sound = arcade.load_sound( ":resources:/sounds/hurt5.wav")
-    MAX_CHANG_X_NUMBER = 30 #for 0.5 second
     def __init__(self):
         super().__init__(data.bar_width, data.bar_height, color=arcade.color.YELLOW)
         self.center_x, self.center_y = data.bar_pos.x, data.bar_pos.y
@@ -240,18 +251,12 @@ class Bar(arcade.SpriteSolidColor):
             self.change_x = data.bar_speed
         return
     def hit(self):
-        print("Bar hit: change_x=", self.change_x, "x speed = ", self.x_sum/len(self.x_array))
         self.hit_sound.play()
         return Data.bar_hit_score
     def normal_vector(self, Ball) -> numpy.array:
         return self._normal_vec
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
-        self.x_array.append(self.change_x)
-        self.x_sum += self.change_x
-        if len(self.x_array) > Bar.MAX_CHANG_X_NUMBER:
-            self.x_sum -= self.x_array.pop(0)
-        # print("Update: change_x=", self.change_x, "x_sum=", self.x_sum, "array_len=", len(self.x_array))
         if self.center_x < self.min_x:
             self.center_x = self.min_x
         elif self.center_x > self.max_x:
