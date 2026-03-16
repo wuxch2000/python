@@ -24,7 +24,7 @@ def rotate_vector_2d(vector, angle_degrees):
     """
     Rotates a 2D vector around the origin counter-clockwise.
     """
-    print("rotate vecotr by ", angle_degrees, "degree, counter-colockwise")
+    # print("rotate vecotr by ", angle_degrees, "degree, counter-colockwise")
     angle_radians = math.radians(angle_degrees)
     # Rotation matrix
     R = numpy.array([[numpy.cos(angle_radians), -numpy.sin(angle_radians)],
@@ -253,8 +253,14 @@ class Bar(arcade.SpriteSolidColor):
     def hit(self):
         self.hit_sound.play()
         return Data.bar_hit_score
-    def normal_vector(self, Ball) -> numpy.array:
-        return self._normal_vec
+    def _pos_percent_of_bar(self, ball:Ball) -> int:
+        return (ball.center_x-self.left)/(self.right-self.left)
+    def normal_vector(self, ball:Ball) -> numpy.array:
+        percent=self._pos_percent_of_bar(ball)
+        theta_min, theta_max = -15, 15
+        theta = -(theta_min + (theta_max-theta_min)*percent)
+        print("percent=", percent, "rotate vecotr by ", theta, "degree, counter-colockwise")
+        return rotate_vector_2d(self._normal_vec, theta)
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
         if self.center_x < self.min_x:
@@ -384,6 +390,7 @@ class BouncingWindow(arcade.Window):
     def __init__(self):
         super().__init__(data.window_width, data.window_height, data.window_title)
         self.background_color = BACK_GROUND_COLOR
+        self.set_mouse_visible(False)
         return
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE or key == arcade.key.Q:
