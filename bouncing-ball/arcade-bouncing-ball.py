@@ -78,7 +78,7 @@ class Data:
     def next_view(self):
         self._view_list_index += 1
         return self.current_view()
-    def inc_speed(self):
+    def inc_ball_speed(self):
         old_speed = self._ball_speed
         self._ball_speed += Data.ball_speed_inc
         if self._ball_speed > Data.ball_max_speed:
@@ -357,12 +357,12 @@ class BouncingView(GeneralView):
                     print("Stop game")
                     data.game_on = False
                     break
-                if hit:
+                if isinstance(c, Bar):
                     # old_score = data.score
                     data.score += hit
                     # print("score: ", old_hit, "->", data.hit)
                     old_speed = data.get_ball_speed()
-                    data.inc_speed()
+                    data.inc_ball_speed()
                     self.ball.update_speed()
 
         self.score_text.value = f"Score: {data.score}"
