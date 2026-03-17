@@ -141,6 +141,10 @@ class Border(arcade.SpriteList):
         return
 
 class Brick(arcade.SpriteSolidColor):
+    def _angle_between_pos(pos1:numpy.array, pos2:numpy.array):
+        p = numpy.subtract(pos2 , pos1)
+        x, y = p[0], p[1]
+        return math.atan2(y, x)
     def __init__(self, pos):
         super().__init__(Data.brick_width, Data.brick_height, color=arcade.color.CADMIUM_ORANGE)
         # print("brick: x=", pos.x, "y=", pos.y)
@@ -152,25 +156,62 @@ class Brick(arcade.SpriteSolidColor):
             "top-side":    numpy.array([0, 1]),
             "bottom-side": numpy.array([0, -1]),
         }
+        self.center_point = numpy.array([self.center_x, self.center_y])
+        left_x = pos.x - Data.brick_width/2
+        right_x = pos.x + Data.brick_width/2
+        top_y = pos.y + Data.brick_height/2
+        bottom_y = pos.y - Data.brick_height/2
+        self.top_left_point = numpy.array([left_x, top_y])
+        self.top_left_angle = Brick._angle_between_pos(self.center_point, self.top_left_point)
+        self.bottom_left_point = numpy.array([left_x, bottom_y])
+        self.bottom_left_angle = Brick._angle_between_pos(self.center_point, self.bottom_left_point)
+        self.top_right_point = numpy.array([right_x, top_y])
+        self.top_right_angle = Brick._angle_between_pos(self.center_point, self.top_right_point)
+        self.bottom_right_point = numpy.array([right_x, bottom_y])
+        self.bottom_right_angle = Brick._angle_between_pos(self.center_point, self.bottom_right_point)
         return
     def hit(self):
         self.hit_sound.play()
         return 1
     def normal_vector(self, ball:Ball) -> numpy.array:
-        if ball.center_x < self.left:
-            return self._normal_vector_dict["left-side"]
-        elif ball.center_x > self.right:
-            return self._normal_vector_dict["right-side"]
-        elif ball.center_y > self.top:
-            return self._normal_vector_dict["top-side"]
-        elif ball.center_y < self.bottom:
-            return self._normal_vector_dict["bottom-side"]
-        else:
-            print("ball.x", ball.center_x, ".y=", ball.center_y, "left=", self.left, "right=", self.right, "top=", self.top, "bottom=", self.bottom)
-            if ball.change_y > 0:
-                return self._normal_vector_dict["bottom-side"]
+        ball_point = numpy.array([ball.center_x, ball.center_y])
+        if ball.change_x == 0 and ball.change_y == 0:
+            return None
+        if ball.change_x == 0:
             if ball.change_y < 0:
                 return self._normal_vector_dict["top-side"]
+            else:
+                return self._normal_vector_dict["bottom-side"]
+        if ball.change_y == 0:
+            if ball.change_x < 0:
+                return self._normal_vector_dict["right-side"]
+            else:
+                return self._normal_vector_dict["left-side"]
+        ball_angle = Brick._angle_between_pos(self.center_point, ball_point)
+        # print("ball change_x=", ball.change_x, "change_y=", ball.change_y, "angle=", ball_angle,
+        #        "cornor:", self.top_left_angle, self.bottom_left_angle, self.bottom_right_angle, self.top_right_angle )
+        if ball.change_x <= 0:
+            if ball.change_y < 0:
+                if ball_angle >= self.top_left_angle:
+                    return self._normal_vector_dict["top-side"]
+                else:
+                    return self._normal_vector_dict["right-side"]
+            else:
+                if ball_angle >= self.bottom_right_angle:
+                    return self._normal_vector_dict["right-side"]
+                else:
+                    return self._normal_vector_dict["bottom-side"]
+        else:
+            if ball.change_y < 0:
+                if ball_angle >= self.top_right_angle:
+                    return self._normal_vector_dict["left-side"]
+                else:
+                    return self._normal_vector_dict["top-side"]
+            else:
+                if ball_angle >= self.bottom_left_angle:
+                    return self._normal_vector_dict["bottom-side"]
+                else:
+                    return self._normal_vector_dict["left-side"]
         return None
 
 class Barrier(arcade.SpriteList):
