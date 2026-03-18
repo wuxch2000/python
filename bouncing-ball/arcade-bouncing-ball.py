@@ -177,45 +177,48 @@ class Brick(arcade.SpriteSolidColor):
     def hit(self):
         self.hit_sound.play()
         return 1
-    def normal_vector(self, ball:Ball) -> numpy.array:
-        ball_point = numpy.array([ball.center_x, ball.center_y])
+    def _get_side(self, ball:Ball, ball_angle):
         if ball.change_x == 0 and ball.change_y == 0:
-            return None
+            return ""
         if ball.change_x == 0:
             if ball.change_y < 0:
-                return self._normal_vector_dict[Brick.TOP_SIDE]
+                return Brick.TOP_SIDE
             else:
-                return self._normal_vector_dict[Brick.BOTTOM_SIDE]
+                return Brick.BOTTOM_SIDE
         if ball.change_y == 0:
             if ball.change_x < 0:
-                return self._normal_vector_dict[Brick.RIGHT_SIDE]
+                return Brick.RIGHT_SIDE
             else:
-                return self._normal_vector_dict[Brick.LEFT_SIDE]
-        ball_angle = Brick._angle_between_pos(self.center_point, ball_point)
-        # print("ball change_x=", ball.change_x, "change_y=", ball.change_y, "angle=", ball_angle,
-        #        "cornor:", self.top_left_angle, self.bottom_left_angle, self.bottom_right_angle, self.top_right_angle )
+                return Brick.LEFT_SIDE
         if ball.change_x <= 0:
             if ball.change_y < 0:
                 if ball_angle >= self.top_left_angle:
-                    return self._normal_vector_dict[Brick.TOP_SIDE]
+                    return Brick.TOP_SIDE
                 else:
-                    return self._normal_vector_dict[Brick.RIGHT_SIDE]
+                    return Brick.RIGHT_SIDE
             else:
                 if ball_angle >= self.bottom_right_angle:
-                    return self._normal_vector_dict[Brick.RIGHT_SIDE]
+                    return Brick.RIGHT_SIDE
                 else:
-                    return self._normal_vector_dict[Brick.BOTTOM_SIDE]
+                    return Brick.BOTTOM_SIDE
         else:
             if ball.change_y < 0:
                 if ball_angle >= self.top_right_angle:
-                    return self._normal_vector_dict[Brick.LEFT_SIDE]
+                    return Brick.LEFT_SIDE
                 else:
-                    return self._normal_vector_dict[Brick.TOP_SIDE]
+                    return Brick.TOP_SIDE
             else:
                 if ball_angle >= self.bottom_left_angle:
-                    return self._normal_vector_dict[Brick.BOTTOM_SIDE]
+                    return Brick.BOTTOM_SIDE
                 else:
-                    return self._normal_vector_dict[Brick.LEFT_SIDE]
+                    return Brick.LEFT_SIDE
+    def normal_vector(self, ball:Ball) -> numpy.array:
+        ball_point = numpy.array([ball.center_x, ball.center_y])
+        ball_angle = Brick._angle_between_pos(self.center_point, ball_point)
+        side = self._get_side(ball, ball_angle)
+        print("ball change_x=", ball.change_x, "change_y=", ball.change_y, "angle=", ball_angle, "SIDE=", side, "cornor:", self.top_left_angle, self.bottom_left_angle, self.bottom_right_angle, self.top_right_angle )
+        if side:
+            return self._normal_vector_dict[side]
         return None
 
 class Barrier(arcade.SpriteList):
