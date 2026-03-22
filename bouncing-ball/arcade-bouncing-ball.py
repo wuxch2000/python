@@ -164,8 +164,8 @@ class Brick(arcade.SpriteSolidColor):
     def _angle_to_center(self, point):
         return angle_between_pos(point, self.center_point)
 
-    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, disappear_by_hit=True):
-        super().__init__(width, height, color=arcade.color.CADMIUM_ORANGE)
+    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, disappear_by_hit=True, brick_color=arcade.color.CADMIUM_ORANGE):
+        super().__init__(width, height, color=brick_color)
         # print("brick: x=", pos.x, "y=", pos.y)
         self.disappear_by_hit = disappear_by_hit
         self.center_x, self.center_y = pos.x, pos.y
