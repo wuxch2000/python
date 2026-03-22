@@ -99,7 +99,7 @@ class Data:
         self._ball_speed += Data.ball_speed_inc
         if self._ball_speed > Data.ball_max_speed:
             self._ball_speed = Data.ball_max_speed
-        logger.info("speed: ", old_speed, "->", data._ball_speed)
+        logger.info(f'speed: {old_speed} -> {data._ball_speed}')
     def get_ball_speed(self):
         return self._ball_speed
     def start_over(self):
@@ -164,9 +164,10 @@ class Brick(arcade.SpriteSolidColor):
     def _angle_to_center(self, point):
         return angle_between_pos(point, self.center_point)
 
-    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height):
+    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, disappear_by_hit=True):
         super().__init__(width, height, color=arcade.color.CADMIUM_ORANGE)
         # print("brick: x=", pos.x, "y=", pos.y)
+        self.disappear_by_hit = disappear_by_hit
         self.center_x, self.center_y = pos.x, pos.y
         self.hit_sound = arcade.load_sound( ":resources:/sounds/hurt3.wav")
         self._normal_vector_dict = {
@@ -440,7 +441,8 @@ class GameTestView(GeneralView):
         for c in collision:
             sprite_reflect(self.ball, c)
             c.hit()
-            self._bricks.remove(c)
+            if isinstance(c, Brick) and c.disappear_by_hit:
+                self._bricks.remove(c)
         collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
         for c in collision:
             c.hit()
@@ -481,22 +483,18 @@ class BouncingView(GeneralView):
             collision = arcade.check_for_collision_with_list(self.ball, self._barrier)
             for c in collision:
                 sprite_reflect(self.ball, c)
-                hit = c.hit()
-                data.score += hit
-                self._barrier.remove(c)
+                data.score += c.hit()
+                if isinstance(c, Brick) and c.disappear_by_hit:
+                    self._barrier.remove(c)
             collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
             for c in collision:
                 sprite_reflect(self.ball, c)
-                hit = c.hit()
                 if c.stop_game:
                     logger.info("Stop game")
                     data.game_on = False
                     break
                 if isinstance(c, Bar):
-                    # old_score = data.score
-                    data.score += hit
-                    # print("score: ", old_hit, "->", data.hit)
-                    old_speed = data.get_ball_speed()
+                    data.score += c.hit()
                     data.inc_ball_speed()
                     self.ball.update_speed()
 
