@@ -249,14 +249,25 @@ class Brick(arcade.SpriteSolidColor):
             return self._normal_vector_dict[side]
         return None
 
+class MetalBrick(Brick):
+    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, disappear_by_hit=False, brick_color=arcade.color.SILVER):
+        super().__init__(pos, width, height, disappear_by_hit, brick_color)
+        return
+
 class Barrier(arcade.SpriteList):
     def __init__(self):
         super().__init__()
         for i in range(0, 12):
             x = 2*data.border_gap+i*2*Data.brick_width
-            for j in range(0, 5):
-                y = Data.window_height*4/5 + j*(2*Data.brick_height)
+            for j in range(0, 10):
+                y = Data.window_height*14/15 - j*(2*Data.brick_height)
                 brick = Brick(Pos(x,y))
+                super().append(brick)
+        for i in range(0, 8):
+            x = 2*data.border_gap+i*3*Data.brick_width
+            for j in range(10, 11):
+                y = Data.window_height*14/15 - j*(2*Data.brick_height)
+                brick = MetalBrick(Pos(x,y))
                 super().append(brick)
         return
 
@@ -420,7 +431,7 @@ class GameTestView(GeneralView):
         return
     def setup(self, _arg_ball_pos):
         super().setup()
-        brick = Brick(Pos(400,400), width=80, height=80)
+        brick = MetalBrick(Pos(400,400), width=80, height=80)
         self.ball_collision_list = arcade.SpriteList()
         for s in self.border:
             self.ball_collision_list.append(s)
