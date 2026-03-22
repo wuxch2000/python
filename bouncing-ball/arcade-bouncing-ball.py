@@ -439,9 +439,11 @@ class GameTestView(GeneralView):
         collision = arcade.check_for_collision_with_list(self.ball, self._bricks)
         for c in collision:
             sprite_reflect(self.ball, c)
+            c.hit()
             self._bricks.remove(c)
         collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
         for c in collision:
+            c.hit()
             sprite_reflect(self.ball, c)
         self.bar.update(delta_time)
         if data.game_on:
