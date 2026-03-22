@@ -3,6 +3,7 @@
 import random
 import math
 import numpy
+import argparse
 import arcade
 
 def reflect_vector(incident_vector, normal_vector):
@@ -18,6 +19,7 @@ def sprite_reflect(moving_sprite, block_sprite):
         return
     refect_vec = reflect_vector(incident_vec, normal_vec)
     moving_sprite.change_x, moving_sprite.change_y = refect_vec[0], refect_vec[1]
+    print(f'sprite_reflect: {incident_vec[0]:.2f},{incident_vec[1]:.2f}) --->  {moving_sprite.change_x:.2f},{moving_sprite.change_y:.2f})')
     return
 
 def rotate_vector_2d(vector, angle_degrees):
@@ -33,9 +35,21 @@ def rotate_vector_2d(vector, angle_degrees):
     rotated_vector = R @ vector
     return rotated_vector
 
+def str_angle(angle):
+    degrees = math.degrees(angle)
+    return f'{angle:.2f}({degrees:.2f})'
+
+def angle_between_pos(pos1:numpy.array, pos2:numpy.array):
+    p = numpy.subtract(pos2 , pos1)
+    x, y = p[0], p[1]
+    radian =  math.atan2(y, x)
+    # print(f'angle_between_pos: pos1:({pos1[0]:.2f},{pos1[1]:.2f}), pos2:({pos2[0]:.2f},{pos2[1]:.2f}), diff:({x:.2f},{y:.2f}), angle={str_angle(radian)}')
+    return radian
+
 class Pos:
     def __init__(self, x, y):
         self.x, self.y = x, y
+
 
 BACK_GROUND_COLOR=arcade.csscolor.BLACK
 class Data:
@@ -145,12 +159,11 @@ class Brick(arcade.SpriteSolidColor):
     RIGHT_SIDE = "right-side"
     TOP_SIDE = "top-side"
     BOTTOM_SIDE = "bottom-side"
-    def _angle_between_pos(pos1:numpy.array, pos2:numpy.array):
-        p = numpy.subtract(pos2 , pos1)
-        x, y = p[0], p[1]
-        return math.atan2(y, x)
-    def __init__(self, pos):
-        super().__init__(Data.brick_width, Data.brick_height, color=arcade.color.CADMIUM_ORANGE)
+    def _angle_to_center(self, point):
+        return angle_between_pos(point, self.center_point)
+
+    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height):
+        super().__init__(width, height, color=arcade.color.CADMIUM_ORANGE)
         # print("brick: x=", pos.x, "y=", pos.y)
         self.center_x, self.center_y = pos.x, pos.y
         self.hit_sound = arcade.load_sound( ":resources:/sounds/hurt3.wav")
@@ -161,18 +174,22 @@ class Brick(arcade.SpriteSolidColor):
             Brick.BOTTOM_SIDE: numpy.array([0, -1]),
         }
         self.center_point = numpy.array([self.center_x, self.center_y])
-        left_x = pos.x - Data.brick_width/2
-        right_x = pos.x + Data.brick_width/2
-        top_y = pos.y + Data.brick_height/2
-        bottom_y = pos.y - Data.brick_height/2
+        left_x = pos.x - width/2
+        right_x = pos.x + width/2
+        top_y = pos.y + height/2
+        bottom_y = pos.y - height/2
         self.top_left_point = numpy.array([left_x, top_y])
-        self.top_left_angle = Brick._angle_between_pos(self.center_point, self.top_left_point)
+        self.top_left_angle = self._angle_to_center(self.top_left_point)
+
         self.bottom_left_point = numpy.array([left_x, bottom_y])
-        self.bottom_left_angle = Brick._angle_between_pos(self.center_point, self.bottom_left_point)
+        self.bottom_left_angle = self._angle_to_center(self.bottom_left_point)
+
         self.top_right_point = numpy.array([right_x, top_y])
-        self.top_right_angle = Brick._angle_between_pos(self.center_point, self.top_right_point)
+        self.top_right_angle = self._angle_to_center(self.top_right_point)
+
         self.bottom_right_point = numpy.array([right_x, bottom_y])
-        self.bottom_right_angle = Brick._angle_between_pos(self.center_point, self.bottom_right_point)
+        self.bottom_right_angle = self._angle_to_center(self.bottom_right_point)
+        print(f'cornor: left-top={str_angle(self.top_left_angle)}, left-bot={str_angle(self.bottom_left_angle)}, right-bot={str_angle(self.bottom_right_angle)},  right-top={str_angle(self.top_right_angle)}')
         return
     def hit(self):
         self.hit_sound.play()
@@ -192,31 +209,39 @@ class Brick(arcade.SpriteSolidColor):
                 return Brick.LEFT_SIDE
         if ball.change_x <= 0:
             if ball.change_y < 0:
-                if ball_angle >= self.top_left_angle:
+                if ball_angle > 0:
+                    ball_angle -= math.pi
+                if ball_angle >= self.top_right_angle:
                     return Brick.TOP_SIDE
                 else:
                     return Brick.RIGHT_SIDE
             else:
+                if ball_angle < 0:
+                    ball_angle += math.pi
                 if ball_angle >= self.bottom_right_angle:
                     return Brick.RIGHT_SIDE
                 else:
                     return Brick.BOTTOM_SIDE
         else:
             if ball.change_y < 0:
-                if ball_angle >= self.top_right_angle:
+                if ball_angle > 0:
+                    ball_angle -= math.pi
+                if ball_angle >= self.top_left_angle:
                     return Brick.LEFT_SIDE
                 else:
                     return Brick.TOP_SIDE
             else:
+                if ball_angle < 0:
+                    ball_angle += math.pi
                 if ball_angle >= self.bottom_left_angle:
                     return Brick.BOTTOM_SIDE
                 else:
                     return Brick.LEFT_SIDE
     def normal_vector(self, ball:Ball) -> numpy.array:
         ball_point = numpy.array([ball.center_x, ball.center_y])
-        ball_angle = Brick._angle_between_pos(self.center_point, ball_point)
+        ball_angle = self._angle_to_center(ball_point)
         side = self._get_side(ball, ball_angle)
-        print("ball change_x=", ball.change_x, "change_y=", ball.change_y, "angle=", ball_angle, "SIDE=", side, "cornor:", self.top_left_angle, self.bottom_left_angle, self.bottom_right_angle, self.top_right_angle )
+        print(f'ball change_x={ball.change_x:.2f} change_y={ball.change_y:.2f} angle={str_angle(ball_angle)} SIDE={side} cornor: left-top={str_angle(self.top_left_angle)}, left-bot={str_angle(self.bottom_left_angle)}, right-bot={str_angle(self.bottom_right_angle)},  right-top={str_angle(self.top_right_angle)}')
         if side:
             return self._normal_vector_dict[side]
         return None
@@ -248,9 +273,15 @@ class Ball(arcade.SpriteCircle):
         super().__init__(data.ball_radius, arcade.color.RED)
         self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
         return
-    def reset(self):
-        self._set_angle()
-        self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
+    def reset(self, angle=None, pos=None):
+        if angle is None:
+            self._set_angle()
+        else:
+            self._update_x_y(angle)
+        if pos is None:
+            self.center_x, self.center_y = data.ball_pos.x, data.ball_pos.y
+        else:
+            self.center_x, self.center_y = pos.x, pos.y
         return
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
@@ -379,6 +410,51 @@ class GameOverView(GeneralView):
         if key == arcade.key.SPACE:
            self.window.game_start()
         return
+
+class GameTestView(GeneralView):
+    def __init__(self):
+        super().__init__()
+        return
+    def setup(self):
+        super().setup()
+        brick = Brick( Pos(400,400), width=80, height=80)
+        self.ball_collision_list = arcade.SpriteList()
+        for s in self.border:
+            self.ball_collision_list.append(s)
+        self.ball_collision_list.append(self.bar)
+        self._bricks = arcade.SpriteList()
+        self._bricks.append(brick)
+        ball_pos = Pos(600,700)
+        ball_angle = angle_between_pos(numpy.array([ball_pos.x, ball_pos.y]), numpy.array([brick.center_x, brick.center_y]))
+        self.ball.reset(ball_angle, ball_pos)
+        return
+    def on_draw(self):
+        super().on_draw() #just keep the last screen
+        self._bricks.draw()
+        return
+    def on_update(self, delta_time):
+        collision = arcade.check_for_collision_with_list(self.ball, self._bricks)
+        for c in collision:
+            sprite_reflect(self.ball, c)
+            self._bricks.remove(c)
+        collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
+        for c in collision:
+            sprite_reflect(self.ball, c)
+        self.bar.update(delta_time)
+        if data.game_on:
+            self.ball.update(delta_time)
+        return
+    def on_key_press(self, key, modifiers):
+        global data
+        if key == arcade.key.SPACE:
+            print("TestView: start")
+            data.game_on = True
+        self.bar.on_key_press(key, modifiers)
+        return
+    def on_key_release(self, key, modifiers):
+        self.bar.on_key_release(key, modifiers)
+        return
+
 class BouncingView(GeneralView):
     def __init__(self):
         super().__init__()
@@ -459,19 +535,27 @@ class BouncingWindow(arcade.Window):
             self.show_view(view)
 
 def main():
+    parse = argparse.ArgumentParser()
     global data
+    parse.add_argument("-t", "--test", help="run test",action='store_true')
+    args = parse.parse_args()
     data = Data()
-    data.game_on = True
     window = BouncingWindow()
-    game_start_view = GameStartView()
-    game_start_view.setup()
-    data.append_view(game_start_view)
-    bouncing_view = BouncingView()
-    bouncing_view.setup()
-    data.append_view(bouncing_view)
-    game_over_view = GameOverView()
-    game_over_view.setup()
-    data.append_view(game_over_view)
+    if args.test:
+        test_view = GameTestView()
+        test_view.setup()
+        data.append_view(test_view)
+    else:
+        data.game_on = True
+        game_start_view = GameStartView()
+        game_start_view.setup()
+        data.append_view(game_start_view)
+        bouncing_view = BouncingView()
+        bouncing_view.setup()
+        data.append_view(bouncing_view)
+        game_over_view = GameOverView()
+        game_over_view.setup()
+        data.append_view(game_over_view)
     window.show_view(data.current_view())
     arcade.run()
 
