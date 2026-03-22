@@ -5,6 +5,8 @@ import math
 import numpy
 import argparse
 import arcade
+import logging
+logger = logging.getLogger("Bouncing")
 
 def reflect_vector(incident_vector, normal_vector):
     n = normal_vector / numpy.linalg.norm(normal_vector)
@@ -15,11 +17,11 @@ def sprite_reflect(moving_sprite, block_sprite):
     incident_vec = numpy.array([moving_sprite.change_x, moving_sprite.change_y])
     normal_vec = block_sprite.normal_vector(moving_sprite)
     if normal_vec is None:
-        print("invalid normal vec:")
+        logger.warning("invalid normal vec:")
         return
     refect_vec = reflect_vector(incident_vec, normal_vec)
     moving_sprite.change_x, moving_sprite.change_y = refect_vec[0], refect_vec[1]
-    print(f'sprite_reflect: {incident_vec[0]:.2f},{incident_vec[1]:.2f}) --->  {moving_sprite.change_x:.2f},{moving_sprite.change_y:.2f})')
+    logger.debug(f'sprite_reflect: {incident_vec[0]:.2f},{incident_vec[1]:.2f}) --->  {moving_sprite.change_x:.2f},{moving_sprite.change_y:.2f})')
     return
 
 def rotate_vector_2d(vector, angle_degrees):
@@ -97,7 +99,7 @@ class Data:
         self._ball_speed += Data.ball_speed_inc
         if self._ball_speed > Data.ball_max_speed:
             self._ball_speed = Data.ball_max_speed
-        print("speed: ", old_speed, "->", data._ball_speed)
+        logger.info("speed: ", old_speed, "->", data._ball_speed)
     def get_ball_speed(self):
         return self._ball_speed
     def start_over(self):
@@ -189,7 +191,7 @@ class Brick(arcade.SpriteSolidColor):
 
         self.bottom_right_point = numpy.array([right_x, bottom_y])
         self.bottom_right_angle = self._angle_to_center(self.bottom_right_point)
-        print(f'cornor: left-top={str_angle(self.top_left_angle)}, left-bot={str_angle(self.bottom_left_angle)}, right-bot={str_angle(self.bottom_right_angle)},  right-top={str_angle(self.top_right_angle)}')
+        # logger.debug(f'cornor: left-top={str_angle(self.top_left_angle)}, left-bot={str_angle(self.bottom_left_angle)}, right-bot={str_angle(self.bottom_right_angle)},  right-top={str_angle(self.top_right_angle)}')
         return
     def hit(self):
         self.hit_sound.play()
@@ -241,7 +243,7 @@ class Brick(arcade.SpriteSolidColor):
         ball_point = numpy.array([ball.center_x, ball.center_y])
         ball_angle = self._angle_to_center(ball_point)
         side = self._get_side(ball, ball_angle)
-        print(f'ball change_x={ball.change_x:.2f} change_y={ball.change_y:.2f} angle={str_angle(ball_angle)} SIDE={side} cornor: left-top={str_angle(self.top_left_angle)}, left-bot={str_angle(self.bottom_left_angle)}, right-bot={str_angle(self.bottom_right_angle)},  right-top={str_angle(self.top_right_angle)}')
+        logger.debug(f'ball change_x={ball.change_x:.2f} change_y={ball.change_y:.2f} angle={str_angle(ball_angle)} SIDE={side} cornor: left-top={str_angle(self.top_left_angle)}, left-bot={str_angle(self.bottom_left_angle)}, right-bot={str_angle(self.bottom_right_angle)},  right-top={str_angle(self.top_right_angle)}')
         if side:
             return self._normal_vector_dict[side]
         return None
@@ -336,9 +338,9 @@ class Bar(arcade.SpriteSolidColor):
         return (ball.center_x-self.left)/(self.right-self.left)
     def normal_vector(self, ball:Ball) -> numpy.array:
         percent=self._pos_percent_of_bar(ball)
-        theta_min, theta_max = -15, 15
+        theta_min, theta_max = -10, 10
         theta = -(theta_min + (theta_max-theta_min)*percent)
-        print("percent=", percent, "rotate vecotr by ", theta, "degree, counter-colockwise")
+        logger.debug("percent=", percent, "rotate vecotr by ", theta, "degree, counter-colockwise")
         return rotate_vector_2d(self._normal_vec, theta)
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
@@ -415,16 +417,17 @@ class GameTestView(GeneralView):
     def __init__(self):
         super().__init__()
         return
-    def setup(self):
+    def setup(self, _arg_ball_pos):
         super().setup()
-        brick = Brick( Pos(400,400), width=80, height=80)
+        brick = Brick(Pos(400,400), width=80, height=80)
         self.ball_collision_list = arcade.SpriteList()
         for s in self.border:
             self.ball_collision_list.append(s)
         self.ball_collision_list.append(self.bar)
         self._bricks = arcade.SpriteList()
         self._bricks.append(brick)
-        ball_pos = Pos(600,700)
+        ball_pos = Pos(_arg_ball_pos[0],_arg_ball_pos[1])
+        logger.debug(f'ball pos: {ball_pos.x}, {ball_pos.y}')
         ball_angle = angle_between_pos(numpy.array([ball_pos.x, ball_pos.y]), numpy.array([brick.center_x, brick.center_y]))
         self.ball.reset(ball_angle, ball_pos)
         return
@@ -447,7 +450,7 @@ class GameTestView(GeneralView):
     def on_key_press(self, key, modifiers):
         global data
         if key == arcade.key.SPACE:
-            print("TestView: start")
+            logger.info("TestView: start")
             data.game_on = True
         self.bar.on_key_press(key, modifiers)
         return
@@ -484,7 +487,7 @@ class BouncingView(GeneralView):
                 sprite_reflect(self.ball, c)
                 hit = c.hit()
                 if c.stop_game:
-                    print("Stop game")
+                    logger.info("Stop game")
                     data.game_on = False
                     break
                 if isinstance(c, Bar):
@@ -518,6 +521,7 @@ class BouncingWindow(arcade.Window):
         return
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE or key == arcade.key.Q:
+            logger.info("BouncingWindow: start")
             self.close()
         return
     def on_key_release(self, key, modifiers):
@@ -538,12 +542,22 @@ def main():
     parse = argparse.ArgumentParser()
     global data
     parse.add_argument("-t", "--test", help="run test",action='store_true')
+    parse.add_argument("-v", "--verbos", help="verbos",action='store_true')
+    parse.add_argument("-b", "--ball_pos", help="ball position",action='extend', nargs=2, type=int)
     args = parse.parse_args()
+    if args.verbos:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+    logging.basicConfig(level=log_level, format='%(asctime)s %(levelname)-5s : %(message)s')
     data = Data()
     window = BouncingWindow()
     if args.test:
+        ball_pos = args.ball_pos
+        if ball_pos is None:
+            ball_pos = [600, 700]
         test_view = GameTestView()
-        test_view.setup()
+        test_view.setup(ball_pos)
         data.append_view(test_view)
     else:
         data.game_on = True
