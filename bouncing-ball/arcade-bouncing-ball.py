@@ -21,7 +21,7 @@ def sprite_reflect(moving_sprite, block_sprite):
         return
     refect_vec = reflect_vector(incident_vec, normal_vec)
     moving_sprite.change_x, moving_sprite.change_y = refect_vec[0], refect_vec[1]
-    logger.debug(f'sprite_reflect: {incident_vec[0]:.2f},{incident_vec[1]:.2f}) --->  {moving_sprite.change_x:.2f},{moving_sprite.change_y:.2f})')
+    logger.debug(f'sprite_reflect: ({incident_vec[0]:.2f},{incident_vec[1]:.2f}) -->  ({moving_sprite.change_x:.2f},{moving_sprite.change_y:.2f})')
     return
 
 def rotate_vector_2d(vector, angle_degrees):
@@ -263,12 +263,12 @@ class Barrier(arcade.SpriteList):
                 y = Data.window_height*14/15 - j*(2*Data.brick_height)
                 brick = Brick(Pos(x,y))
                 super().append(brick)
-        for i in range(0, 8):
-            x = 2*data.border_gap+i*3*Data.brick_width
-            for j in range(10, 11):
-                y = Data.window_height*14/15 - j*(2*Data.brick_height)
-                brick = MetalBrick(Pos(x,y))
-                super().append(brick)
+        # for i in range(0, 8):
+        #     x = 2*data.border_gap+i*3*Data.brick_width
+        #     for j in range(10, 11):
+        #         y = Data.window_height*14/15 - j*(2*Data.brick_height)
+        #         brick = MetalBrick(Pos(x,y))
+        #         super().append(brick)
         return
 
 class Ball(arcade.SpriteCircle):
@@ -450,6 +450,7 @@ class GameTestView(GeneralView):
     def on_update(self, delta_time):
         collision = arcade.check_for_collision_with_list(self.ball, self._bricks)
         for c in collision:
+            logger.debug(f"hit: ball.pos=({self.ball.center_x:.2f},{self.ball.center_y:.2f}) c.pos=({c.center_x:.2f},{c.center_y:.2f})")
             sprite_reflect(self.ball, c)
             c.hit()
             if isinstance(c, Brick) and c.disappear_by_hit:
