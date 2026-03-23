@@ -467,19 +467,17 @@ class GameTestView(GeneralView):
             if self.last_hit is None or c != self.last_hit:
                 collision_list.append(c)
         collision = arcade.check_for_collision_with_list(self.ball, collision_list)
-        if not collision:
-            self.last_hit = None
-        else:
-            for c in collision:
-                logger.debug(f"hit: {self.ball.pos_str()} {c.pos_str()}")
-                sprite_reflect(self.ball, c)
-                c.hit()
-                if isinstance(c, Brick) and c.disappear_by_hit:
-                    self._bricks.remove(c)
-                else:
-                    self.last_hit = c
+        for c in collision:
+            logger.debug(f"hit: {self.ball.pos_str()} {c.pos_str()}")
+            sprite_reflect(self.ball, c)
+            c.hit()
+            if isinstance(c, Brick) and c.disappear_by_hit:
+                self._bricks.remove(c)
+            else:
+                self.last_hit = c
         collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
         for c in collision:
+            self.last_hit = None
             c.hit()
             sprite_reflect(self.ball, c)
         self.bar.update(delta_time)
@@ -522,18 +520,16 @@ class BouncingView(GeneralView):
                 if self.last_hit is None or c != self.last_hit:
                     collision_list.append(c)
             collision = arcade.check_for_collision_with_list(self.ball, collision_list)
-            if not collision:
-                self.last_hit = None
-            else:
-                for c in collision:
-                    sprite_reflect(self.ball, c)
-                    data.score += c.hit()
-                    if isinstance(c, Brick) and c.disappear_by_hit:
-                        self._barrier.remove(c)
-                    else:
-                        self.last_hit = c
+            for c in collision:
+                sprite_reflect(self.ball, c)
+                data.score += c.hit()
+                if isinstance(c, Brick) and c.disappear_by_hit:
+                    self._barrier.remove(c)
+                else:
+                    self.last_hit = c
             collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
             for c in collision:
+                self.last_hit = None
                 sprite_reflect(self.ball, c)
                 if c.stop_game:
                     logger.info("Stop game")
