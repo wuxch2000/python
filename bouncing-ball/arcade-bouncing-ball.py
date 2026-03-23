@@ -4,6 +4,7 @@ import random
 import math
 import numpy
 import argparse
+import pyglet
 import arcade
 import logging
 logger = logging.getLogger("Bouncing")
@@ -48,10 +49,8 @@ def angle_between_pos(pos1:numpy.array, pos2:numpy.array):
     # print(f'angle_between_pos: pos1:({pos1[0]:.2f},{pos1[1]:.2f}), pos2:({pos2[0]:.2f},{pos2[1]:.2f}), diff:({x:.2f},{y:.2f}), angle={str_angle(radian)}')
     return radian
 
-class Pos:
-    def __init__(self, x, y):
-        self.x, self.y = x, y
-
+class Pos(pyglet.math.Vec2):
+    pass
 
 BACK_GROUND_COLOR=arcade.csscolor.BLACK
 class Data:
@@ -248,6 +247,11 @@ class Brick(arcade.SpriteSolidColor):
         if side:
             return self._normal_vector_dict[side]
         return None
+    def pos_str(self):
+        str = f'brick_pos: {self.center_x:.2f},{self.center_y:.2f}'
+        str += f' x: {self.center_x-self.width:.2f}->{self.center_x+self.width:.2f}'
+        str += f' y: {self.center_y-self.height:.2f}->{self.center_y+self.height:.2f}'
+        return str
 
 class MetalBrick(Brick):
     def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, disappear_by_hit=False, brick_color=arcade.color.SILVER):
@@ -263,12 +267,12 @@ class Barrier(arcade.SpriteList):
                 y = Data.window_height*14/15 - j*(2*Data.brick_height)
                 brick = Brick(Pos(x,y))
                 super().append(brick)
-        # for i in range(0, 8):
-        #     x = 2*data.border_gap+i*3*Data.brick_width
-        #     for j in range(10, 11):
-        #         y = Data.window_height*14/15 - j*(2*Data.brick_height)
-        #         brick = MetalBrick(Pos(x,y))
-        #         super().append(brick)
+        for i in range(0, 8):
+            x = 2*data.border_gap+i*3*Data.brick_width
+            for j in range(10, 11):
+                y = Data.window_height*14/15 - j*(2*Data.brick_height)
+                brick = MetalBrick(Pos(x,y))
+                super().append(brick)
         return
 
 class Ball(arcade.SpriteCircle):
@@ -301,6 +305,11 @@ class Ball(arcade.SpriteCircle):
         self.center_x += self.change_x
         self.center_y += self.change_y
         return
+    def pos_str(self):
+        str = f'ball_pos : {self.center_x:.2f},{self.center_y:.2f}'
+        str += f' x: {self.center_x-data.ball_radius:.2f}->{self.center_x+data.ball_radius:.2f}'
+        str += f' y: {self.center_y-data.ball_radius:.2f}->{self.center_y+data.ball_radius:.2f}'
+        return str
     def update_speed(self):
         angle = math.atan2(self.change_y, self.change_x)
         self._update_x_y(angle)
@@ -425,6 +434,9 @@ class GameOverView(GeneralView):
            self.window.game_start()
         return
 
+def debug_sprite(s, name):
+    logger.debug(f'{name} pos: ({s.center_x:.2f}, {s.center_y:.2f}), edge: ({s.max_y},{s.min_x},{s.min_y},{s.max_x})')
+
 class GameTestView(GeneralView):
     def __init__(self):
         super().__init__()
@@ -432,6 +444,7 @@ class GameTestView(GeneralView):
     def setup(self, _arg_ball_pos):
         super().setup()
         brick = MetalBrick(Pos(400,400), width=80, height=80)
+        logger.debug(brick.pos_str())
         self.ball_collision_list = arcade.SpriteList()
         for s in self.border:
             self.ball_collision_list.append(s)
@@ -439,22 +452,32 @@ class GameTestView(GeneralView):
         self._bricks = arcade.SpriteList()
         self._bricks.append(brick)
         ball_pos = Pos(_arg_ball_pos[0],_arg_ball_pos[1])
-        logger.debug(f'ball pos: {ball_pos.x}, {ball_pos.y}')
         ball_angle = angle_between_pos(numpy.array([ball_pos.x, ball_pos.y]), numpy.array([brick.center_x, brick.center_y]))
         self.ball.reset(ball_angle, ball_pos)
+        logger.debug(self.ball.pos_str())
+        self.last_hit = None
         return
     def on_draw(self):
         super().on_draw() #just keep the last screen
         self._bricks.draw()
         return
     def on_update(self, delta_time):
-        collision = arcade.check_for_collision_with_list(self.ball, self._bricks)
-        for c in collision:
-            logger.debug(f"hit: ball.pos=({self.ball.center_x:.2f},{self.ball.center_y:.2f}) c.pos=({c.center_x:.2f},{c.center_y:.2f})")
-            sprite_reflect(self.ball, c)
-            c.hit()
-            if isinstance(c, Brick) and c.disappear_by_hit:
-                self._bricks.remove(c)
+        collision_list = arcade.SpriteList()
+        for c in self._bricks:
+            if self.last_hit is None or c != self.last_hit:
+                collision_list.append(c)
+        collision = arcade.check_for_collision_with_list(self.ball, collision_list)
+        if not collision:
+            self.last_hit = None
+        else:
+            for c in collision:
+                logger.debug(f"hit: {self.ball.pos_str()} {c.pos_str()}")
+                sprite_reflect(self.ball, c)
+                c.hit()
+                if isinstance(c, Brick) and c.disappear_by_hit:
+                    self._bricks.remove(c)
+                else:
+                    self.last_hit = c
         collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
         for c in collision:
             c.hit()
@@ -462,6 +485,7 @@ class GameTestView(GeneralView):
         self.bar.update(delta_time)
         if data.game_on:
             self.ball.update(delta_time)
+            logger.debug(f"update: {self.ball.pos_str()}")
         return
     def on_key_press(self, key, modifiers):
         global data
@@ -485,6 +509,7 @@ class BouncingView(GeneralView):
         for s in self.border:
             self.ball_collision_list.append(s)
         self.ball_collision_list.append(self.bar)
+        self.last_hit = None
         return
     def on_draw(self):
         super().on_draw()
@@ -492,12 +517,21 @@ class BouncingView(GeneralView):
     def on_update(self, delta_time):
         global data
         if data.game_on:
-            collision = arcade.check_for_collision_with_list(self.ball, self._barrier)
-            for c in collision:
-                sprite_reflect(self.ball, c)
-                data.score += c.hit()
-                if isinstance(c, Brick) and c.disappear_by_hit:
-                    self._barrier.remove(c)
+            collision_list = arcade.SpriteList()
+            for c in self._barrier:
+                if self.last_hit is None or c != self.last_hit:
+                    collision_list.append(c)
+            collision = arcade.check_for_collision_with_list(self.ball, collision_list)
+            if not collision:
+                self.last_hit = None
+            else:
+                for c in collision:
+                    sprite_reflect(self.ball, c)
+                    data.score += c.hit()
+                    if isinstance(c, Brick) and c.disappear_by_hit:
+                        self._barrier.remove(c)
+                    else:
+                        self.last_hit = c
             collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
             for c in collision:
                 sprite_reflect(self.ball, c)
