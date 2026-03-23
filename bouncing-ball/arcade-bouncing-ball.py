@@ -257,6 +257,9 @@ class MetalBrick(Brick):
     def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, disappear_by_hit=False, brick_color=arcade.color.SILVER):
         super().__init__(pos, width, height, disappear_by_hit, brick_color)
         return
+    def hit(self):
+        self.hit_sound.play()
+        return 0
 
 class Barrier(arcade.SpriteList):
     def __init__(self):
@@ -330,7 +333,10 @@ class Bar(arcade.SpriteSolidColor):
         self.x_sum = 0
         return
     def reset(self):
-        pass
+        self.center_x, self.center_y = data.bar_pos.x, data.bar_pos.y
+        self.left_pressed  = False
+        self.right_pressed = False
+        return
     def on_key_press(self, key, modifiers):
         if key == arcade.key.LEFT:
             self.left_pressed = True
