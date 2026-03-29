@@ -157,18 +157,38 @@ class Border(arcade.SpriteList):
         super().append(wall)
         return
 
+def _color_by_life(life:int):
+    if life <= len(Brick.BRICK_COLOR):
+        color = Brick.BRICK_COLOR[life]
+        if color is not None:
+            return color
+    return arcade.color.CADMIUM_ORANGE
+
 class Brick(arcade.SpriteSolidColor):
     LEFT_SIDE = "left-side"
     RIGHT_SIDE = "right-side"
     TOP_SIDE = "top-side"
     BOTTOM_SIDE = "bottom-side"
+
+    BRICK_COLOR = [
+        None,
+        arcade.color.CADMIUM_ORANGE, # life 1
+        arcade.color.CAMEL,
+        arcade.color.CAMEO_PINK,
+        arcade.color.CAPRI,
+        arcade.color.SILVER          # 5
+        ]
+
     def _angle_to_center(self, point):
         return angle_between_pos(point, self.center_point)
 
-    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, life=1, brick_color=arcade.color.CADMIUM_ORANGE):
-        super().__init__(width, height, color=brick_color)
-        # print("brick: x=", pos.x, "y=", pos.y)
+    def __init__(self, pos, life=1):
+        brick_width=Data.brick_width
+        brick_height= Data.brick_height
+        brick_color=color=_color_by_life(life)
+        super().__init__(center_x=pos.x, center_y=pos.y, width=brick_width, height=brick_height, color=brick_color)
         self.life = life
+        # print("brick: x=", pos.x, "y=", pos.y)
         self.center_x, self.center_y = pos.x, pos.y
         self.hit_sound = arcade.load_sound( ":resources:/sounds/hurt3.wav")
         self._normal_vector_dict = {
@@ -178,10 +198,10 @@ class Brick(arcade.SpriteSolidColor):
             Brick.BOTTOM_SIDE: numpy.array([0, -1]),
         }
         self.center_point = numpy.array([self.center_x, self.center_y])
-        left_x = pos.x - width/2
-        right_x = pos.x + width/2
-        top_y = pos.y + height/2
-        bottom_y = pos.y - height/2
+        left_x = pos.x - brick_width/2
+        right_x = pos.x + brick_width/2
+        top_y = pos.y + brick_height/2
+        bottom_y = pos.y - brick_height/2
         self.top_left_point = numpy.array([left_x, top_y])
         self.top_left_angle = self._angle_to_center(self.top_left_point)
 
@@ -197,6 +217,7 @@ class Brick(arcade.SpriteSolidColor):
         return
     def hit(self):
         self.life -= 1
+        self.color = _color_by_life(self.life)
         self.hit_sound.play()
         return 1
     def _get_side(self, ball:Ball, ball_angle):
@@ -257,13 +278,9 @@ class Brick(arcade.SpriteSolidColor):
         return str
 
 class MetalBrick(Brick):
-    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, life=3, brick_color=arcade.color.SILVER):
-        super().__init__(pos, width, height, life, brick_color)
+    def __init__(self, pos, life=5):
+        super().__init__(pos, life)
         return
-    def hit(self):
-        self.life -= 1
-        self.hit_sound.play()
-        return 0
 
 class Barrier(arcade.SpriteList):
     def __init__(self):
@@ -272,7 +289,13 @@ class Barrier(arcade.SpriteList):
             x = 2*data.border_gap+i*2*Data.brick_width
             for j in range(0, 10):
                 y = Data.window_height*14/15 - j*(2*Data.brick_height)
-                brick = Brick(Pos(x,y))
+                if j < 3:
+                    life = 1
+                elif j < 6:
+                    life = 2
+                elif j < 9:
+                    life = 4
+                brick = Brick(Pos(x,y), life=life)
                 super().append(brick)
         for i in range(0, 8):
             x = 2*data.border_gap+i*3*Data.brick_width
