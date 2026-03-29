@@ -30,6 +30,8 @@ def rotate_vector_2d(vector, angle_degrees):
     Rotates a 2D vector around the origin counter-clockwise.
     """
     # print("rotate vecotr by ", angle_degrees, "degree, counter-colockwise")
+    if angle_degrees == 0:
+        return vector
     angle_radians = math.radians(angle_degrees)
     # Rotation matrix
     R = numpy.array([[numpy.cos(angle_radians), -numpy.sin(angle_radians)],
@@ -358,16 +360,21 @@ class Bar(arcade.SpriteSolidColor):
         if self.right_pressed and not self.left_pressed:
             self.change_x = data.bar_speed
         return
+    def pos_str(self):
+        str = f'bar_pos : {self.center_x:.2f},{self.center_y:.2f}'
+        return str
     def hit(self):
         self.hit_sound.play()
         return Data.bar_hit_score
-    def _pos_percent_of_bar(self, ball:Ball) -> int:
-        return (ball.center_x-self.left)/(self.right-self.left)
+    def _pos_percent_of_bar(self, ball:Ball):
+        left = self.center_x - (data.bar_width/2)
+        percent = (ball.center_x-left)/(data.bar_width)
+        return percent
     def normal_vector(self, ball:Ball) -> numpy.array:
         percent=self._pos_percent_of_bar(ball)
         theta_min, theta_max = -10, 10
         theta = -(theta_min + (theta_max-theta_min)*percent)
-        logger.debug("percent=", percent, "rotate vecotr by ", theta, "degree, counter-colockwise")
+        logger.debug(f"percent={percent:.2f}, rotate vecotr by {theta:.2f} degree, counter-colockwise")
         return rotate_vector_2d(self._normal_vec, theta)
     def update(self, delta_time: float = 1/60):
         self.center_x += self.change_x
@@ -472,20 +479,19 @@ class GameTestView(GeneralView):
         for c in self._bricks:
             if self.last_hit is None or c != self.last_hit:
                 collision_list.append(c)
+        for c in self.ball_collision_list:
+            if self.last_hit is None or c != self.last_hit:
+                collision_list.append(c)
         collision = arcade.check_for_collision_with_list(self.ball, collision_list)
         for c in collision:
-            logger.debug(f"hit: {self.ball.pos_str()} {c.pos_str()}")
+            if isinstance(c, Brick) or isinstance(c, Bar):
+                logger.debug(f"hit: {self.ball.pos_str()} {c.pos_str()}")
             sprite_reflect(self.ball, c)
             c.hit()
             if isinstance(c, Brick) and c.disappear_by_hit:
                 self._bricks.remove(c)
             else:
                 self.last_hit = c
-        collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
-        for c in collision:
-            self.last_hit = None
-            c.hit()
-            sprite_reflect(self.ball, c)
         self.bar.update(delta_time)
         if data.game_on:
             self.ball.update(delta_time)
@@ -525,6 +531,9 @@ class BouncingView(GeneralView):
             for c in self._barrier:
                 if self.last_hit is None or c != self.last_hit:
                     collision_list.append(c)
+            for c in self.ball_collision_list:
+                if self.last_hit is None or c != self.last_hit:
+                    collision_list.append(c)
             collision = arcade.check_for_collision_with_list(self.ball, collision_list)
             for c in collision:
                 sprite_reflect(self.ball, c)
@@ -533,11 +542,7 @@ class BouncingView(GeneralView):
                     self._barrier.remove(c)
                 else:
                     self.last_hit = c
-            collision = arcade.check_for_collision_with_list(self.ball, self.ball_collision_list)
-            for c in collision:
-                self.last_hit = None
-                sprite_reflect(self.ball, c)
-                if c.stop_game:
+                if isinstance(c, Wall) and c.stop_game:
                     logger.info("Stop game")
                     data.game_on = False
                     break
@@ -545,7 +550,6 @@ class BouncingView(GeneralView):
                     data.score += c.hit()
                     data.inc_ball_speed()
                     self.ball.update_speed()
-
         self.score_text.value = f"Score: {data.score}"
         self.speed_text.value = f"Speed: {data.get_ball_speed()}"
         self.bar.update(delta_time)
