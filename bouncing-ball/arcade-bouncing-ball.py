@@ -165,10 +165,10 @@ class Brick(arcade.SpriteSolidColor):
     def _angle_to_center(self, point):
         return angle_between_pos(point, self.center_point)
 
-    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, disappear_by_hit=True, brick_color=arcade.color.CADMIUM_ORANGE):
+    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, life=1, brick_color=arcade.color.CADMIUM_ORANGE):
         super().__init__(width, height, color=brick_color)
         # print("brick: x=", pos.x, "y=", pos.y)
-        self.disappear_by_hit = disappear_by_hit
+        self.life = life
         self.center_x, self.center_y = pos.x, pos.y
         self.hit_sound = arcade.load_sound( ":resources:/sounds/hurt3.wav")
         self._normal_vector_dict = {
@@ -196,6 +196,7 @@ class Brick(arcade.SpriteSolidColor):
         # logger.debug(f'cornor: left-top={str_angle(self.top_left_angle)}, left-bot={str_angle(self.bottom_left_angle)}, right-bot={str_angle(self.bottom_right_angle)},  right-top={str_angle(self.top_right_angle)}')
         return
     def hit(self):
+        self.life -= 1
         self.hit_sound.play()
         return 1
     def _get_side(self, ball:Ball, ball_angle):
@@ -256,10 +257,11 @@ class Brick(arcade.SpriteSolidColor):
         return str
 
 class MetalBrick(Brick):
-    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, disappear_by_hit=False, brick_color=arcade.color.SILVER):
-        super().__init__(pos, width, height, disappear_by_hit, brick_color)
+    def __init__(self, pos, width=Data.brick_width, height= Data.brick_height, life=3, brick_color=arcade.color.SILVER):
+        super().__init__(pos, width, height, life, brick_color)
         return
     def hit(self):
+        self.life -= 1
         self.hit_sound.play()
         return 0
 
@@ -488,7 +490,7 @@ class GameTestView(GeneralView):
                 logger.debug(f"hit: {self.ball.pos_str()} {c.pos_str()}")
             sprite_reflect(self.ball, c)
             c.hit()
-            if isinstance(c, Brick) and c.disappear_by_hit:
+            if isinstance(c, Brick) and c.life == 0:
                 self._bricks.remove(c)
             else:
                 self.last_hit = c
@@ -536,12 +538,11 @@ class BouncingView(GeneralView):
                     collision_list.append(c)
             collision = arcade.check_for_collision_with_list(self.ball, collision_list)
             for c in collision:
+                self.last_hit = c
                 sprite_reflect(self.ball, c)
                 data.score += c.hit()
-                if isinstance(c, Brick) and c.disappear_by_hit:
+                if isinstance(c, Brick) and c.life == 0:
                     self._barrier.remove(c)
-                else:
-                    self.last_hit = c
                 if isinstance(c, Wall) and c.stop_game:
                     logger.info("Stop game")
                     data.game_on = False
