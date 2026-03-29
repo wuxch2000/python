@@ -447,8 +447,8 @@ class GameOverView(GeneralView):
            self.window.game_start()
         return
 
-def debug_sprite(s, name):
-    logger.debug(f'{name} pos: ({s.center_x:.2f}, {s.center_y:.2f}), edge: ({s.max_y},{s.min_x},{s.min_y},{s.max_x})')
+# def debug_sprite(s, name):
+#     logger.debug(f'{name} pos: ({s.center_x:.2f}, {s.center_y:.2f}), edge: ({s.max_y},{s.min_x},{s.min_y},{s.max_x})')
 
 class GameTestView(GeneralView):
     def __init__(self):
@@ -495,7 +495,7 @@ class GameTestView(GeneralView):
         self.bar.update(delta_time)
         if data.game_on:
             self.ball.update(delta_time)
-            logger.debug(f"update: {self.ball.pos_str()}")
+            # logger.debug(f"update: {self.ball.pos_str()}")
         return
     def on_key_press(self, key, modifiers):
         global data
